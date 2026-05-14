@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProctorAI — Оқытушы Панелі</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <script src="../js/api.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    .monitoring-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .student-monitor-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: var(--transition); cursor: pointer; }
+    .student-monitor-card:hover { border-color: var(--border-2); transform: translateY(-2px); }
+    .student-monitor-card.flagged { border-color: rgba(255,80,80,0.4); box-shadow: 0 0 20px rgba(255,80,80,0.1); }
+    .student-monitor-card.warning { border-color: rgba(245,200,66,0.4); }
+    .cam-area { height: 120px; background: linear-gradient(135deg, #070d1a, #0c1425); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .cam-face-icon { font-size: 2.5rem; opacity: 0.6; }
+    .cam-scan { position: absolute; inset: 0; }
+    .cam-scan::after { content: ''; position: absolute; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(45,212,160,0.5), transparent); animation: scanLine 3s ease-in-out infinite; }
+    @keyframes scanLine { 0%{top:0} 50%{top:100%} 100%{top:0} }
+    .cam-risk { position: absolute; top: 8px; right: 8px; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .cam-risk.low  { background: rgba(45,212,160,0.2);  color: var(--accent-green); }
+    .cam-risk.mid  { background: rgba(245,200,66,0.2);  color: var(--accent-yellow); }
+    .cam-risk.high { background: rgba(255,80,80,0.2);   color: #ff5050; }
+    .cam-rec { position: absolute; bottom: 6px; left: 8px; display: flex; align-items: center; gap: 5px; font-size: 0.65rem; color: var(--text-muted); }
+    .student-card-info { padding: 12px; }
+    .student-card-name { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .student-card-meta { display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); }
+    .student-progress-mini { font-size: 0.7rem; color: var(--accent); font-weight: 600; }
+    .alert-feed { max-height: 300px; overflow-y: auto; }
+    .live-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); animation: fadeIn 0.3s ease; }
+    .live-alert:last-child { border-bottom: none; }
+    .alert-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .alert-icon.warn   { background: rgba(245,200,66,0.15); }
+    .alert-icon.danger { background: rgba(255,80,80,0.15); }
+    .alert-icon.info   { background: rgba(79,142,255,0.15); }
+    .alert-body { flex: 1; }
+    .alert-title { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .alert-sub   { font-size: 0.75rem; color: var(--text-muted); }
+    .alert-time  { font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0; }
+    .exam-select-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .exam-select-bar select { background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 14px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.875rem; outline: none; cursor: pointer; }
+    .bulk-actions { display: flex; gap: 8px; margin-left: auto; }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <nav class="navbar">
+    <div class="nav-logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="var(--accent)" stroke-width="1.5"/>
+        <circle cx="14" cy="14" r="3" fill="var(--accent)"/>
+      </svg>
+      <span class="logo-text">Proctor<em>AI</em></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="badge badge-red"><span class="status-dot danger"></span> ТІКЕЛЕЙ ЕМТИХАН ЖҮРУДЕ</span>
+    </div>
+    <div class="nav-links">
+      <a href="../index.html" class="nav-link">← Кіру</a>
+      <a href="student-dashboard.html" class="nav-link">Студент</a>
+      <a href="admin-dashboard.html" class="nav-link">Әкімші</a>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Оқытушы панелі</div>
+        <a href="#" class="sidebar-item active"><span class="icon">👁️</span> Тікелей бақылау <span class="badge-count">28</span></a>
+        <a href="#" class="sidebar-item"><span class="icon">⚠️</span> Ескертулер <span class="badge-count">5</span></a>
+        <a href="#" class="sidebar-item"><span class="icon">📝</span> Емтихандар</a>
+        <a href="#" class="sidebar-item"><span class="icon">📊</span> Аналитика</a>
+        <a href="#" class="sidebar-item"><span class="icon">📄</span> Есептер</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Басқару</div>
+        <a href="#" class="sidebar-item"><span class="icon">👥</span> Студенттер</a>
+        <a href="#" class="sidebar-item"><span class="icon">📅</span> Кесте</a>
+        <a href="#" class="sidebar-item"><span class="icon">🎓</span> Курстар</a>
+      </div>
+      <div style="position:absolute;bottom:24px;left:16px;right:16px;">
+        <div class="card" style="padding:14px;">
+          <div style="font-size:0.78rem;font-weight:600;margin-bottom:2px;">Проф. Айбек Н.</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">Компьютерлік Ғылымдар</div>
+          <div style="margin-top:8px;font-size:0.72rem;color:var(--accent-green);">● Онлайн</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header fade-in">
+        <h1>Тікелей Бақылау 👁️</h1>
+        <p>Деректер Құрылымдары және Алгоритмдер — Аралық бақылау · <span style="color:var(--accent)">28 студент белсенді</span> · 43 минут бұрын басталды</p>
+      </div>
+
+      <div class="grid-4 fade-in-1" style="margin-bottom:24px;">
+        <div class="stat-card blue"><div class="stat-card-icon">👥</div><div class="stat-card-value">28</div><div class="stat-card-label">Белсенді Студенттер</div></div>
+        <div class="stat-card green"><div class="stat-card-icon">✅</div><div class="stat-card-value">21</div><div class="stat-card-label">Төмен Қауіп</div></div>
+        <div class="stat-card orange"><div class="stat-card-icon">⚠️</div><div class="stat-card-value">4</div><div class="stat-card-label">Орташа Қауіп</div></div>
+        <div class="stat-card" style="background:var(--surface);border:1px solid var(--border);">
+          <div class="stat-card-icon">🚨</div>
+          <div class="stat-card-value" style="color:#ff5050;">3</div>
+          <div class="stat-card-label">Жоғары Қауіп</div>
+        </div>
+      </div>
+
+      <div class="exam-select-bar fade-in-2">
+        <span style="font-size:0.82rem;color:var(--text-muted);">Емтихан:</span>
+        <select id="examSel">
+          <option value="">Барлық емтихандар</option>
+        </select>
+        <span style="font-size:0.82rem;color:var(--text-muted);">Сүзгі:</span>
+        <select id="filterSel" onchange="filterStudents(this.value)">
+          <option value="all">Барлық студенттер</option>
+          <option value="high">Тек жоғары қауіп</option>
+          <option value="flagged">Белгіленгендер</option>
+        </select>
+        <div class="bulk-actions">
+          <button class="btn btn-ghost" style="font-size:0.78rem;padding:7px 14px;">📤 Есепті экспорттау</button>
+          <button class="btn btn-primary" style="font-size:0.78rem;padding:7px 14px;">🔔 Жаппай хабарлама</button>
+        </div>
+      </div>
+
+      <div class="monitoring-grid fade-in-2" id="monitorGrid"></div>
+
+      <div class="grid-2 fade-in-3">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">🚨 Тікелей Ескертулер</h3>
+            <span class="badge badge-red" id="alertCount">5 жаңа</span>
+          </div>
+          <div class="alert-feed" id="alertFeed"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">📊 Алдау Баллы бойынша рейтинг</h3>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Студент</th><th>Балл</th><th>Бұзушылық</th><th>Әрекет</th></tr></thead>
+            <tbody id="leaderTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    Auth.check();
+    const user = Auth.user();
+
+    // Sidebar user info
+    document.querySelector('.sidebar .card div:first-child').textContent = user?.fullName || 'Оқытушы';
+
+    // Logout
+    document.querySelectorAll('.sidebar-item, .nav-link').forEach(a => {
+      if (a.textContent.includes('Шығу') || a.textContent.includes('Кіру')) {
+        a.addEventListener('click', e => { e.preventDefault(); Auth.clear(); window.location.href = '../index.html'; });
+      }
+    });
+
+    let allSessions = [];
+    let examSelect  = document.getElementById('examSel');
+
+    function riskLevel(score) {
+      if (score >= 60) return 'high';
+      if (score >= 30) return 'mid';
+      return 'low';
+    }
+
+    function renderGrid(sessions, filter = 'all') {
+      const faces = ['😐','😑','🙂','😶','😊','😔','😐','😑'];
+      const list = sessions.filter(s => {
+        if (filter === 'all')     return true;
+        if (filter === 'high')    return riskLevel(s.cheatScore) === 'high';
+        if (filter === 'flagged') return s.violations?.length > 2;
+        return true;
+      });
+      document.getElementById('monitorGrid').innerHTML = list.length
+        ? list.map((s, i) => {
+            const risk = riskLevel(s.cheatScore);
+            return `<div class="student-monitor-card ${risk==='high'?'flagged':risk==='mid'?'warning':''}">
+              <div class="cam-area">
+                <div class="cam-scan"></div>
+                <div class="cam-face-icon">${faces[i%faces.length]}</div>
+                <div class="cam-risk ${risk}">${s.cheatScore}%</div>
+                <div class="cam-rec"><div style="width:5px;height:5px;border-radius:50%;background:#ff5050;animation:pulse-dot 1s ease infinite;"></div> ЖАЗ</div>
+              </div>
+              <div class="student-card-info">
+                <div class="student-card-name">${s.studentName}</div>
+                <div class="student-card-meta">
+                  <span>${s.violations?.length || 0} бұзушылық</span>
+                  <span class="student-progress-mini" style="color:${risk==='high'?'#ff5050':risk==='mid'?'var(--accent-yellow)':'var(--accent)'}">${s.cheatScore}%</span>
+                </div>
+              </div>
+            </div>`;
+          }).join('')
+        : '<div style="color:var(--text-muted);padding:20px;text-align:center;">Белсенді сессия жоқ</div>';
+
+      // Stats
+      const low  = list.filter(s => riskLevel(s.cheatScore) === 'low').length;
+      const mid  = list.filter(s => riskLevel(s.cheatScore) === 'mid').length;
+      const high = list.filter(s => riskLevel(s.cheatScore) === 'high').length;
+      document.querySelectorAll('.stat-card-value')[0].textContent = list.length;
+      document.querySelectorAll('.stat-card-value')[1].textContent = low;
+      document.querySelectorAll('.stat-card-value')[2].textContent = mid;
+      document.querySelectorAll('.stat-card-value')[3].textContent = high;
+      document.getElementById('alertCount').textContent = high + ' жаңа';
+
+      // Violations feed
+      const allViolations = list
+        .flatMap(s => (s.violations || []).map(v => ({ ...v, student: s.studentName })))
+        .sort((a, b) => new Date(b.detectedAt) - new Date(a.detectedAt))
+        .slice(0, 8);
+      document.getElementById('alertFeed').innerHTML = allViolations.length
+        ? allViolations.map(v => {
+            const score = v.score || 0;
+            const type  = score >= 60 ? 'danger' : score >= 30 ? 'warn' : 'info';
+            const icons = { PHONE_DETECTED:'📱', NO_FACE:'👤', MULTIPLE_FACES:'👥', HEAD_TURNED:'↩️', VOICE_DETECTED:'🔊', BOOK_DETECTED:'📚' };
+            const icon  = icons[v.type] || '⚠️';
+            const t     = v.detectedAt ? new Date(v.detectedAt).toLocaleTimeString('kk-KZ', {hour:'2-digit',minute:'2-digit'}) : '';
+            return `<div class="live-alert">
+              <div class="alert-icon ${type}">${icon}</div>
+              <div class="alert-body"><div class="alert-title">${v.student} — ${v.type}</div><div class="alert-sub">${v.details || ''}</div></div>
+              <div class="alert-time">${t}</div>
+            </div>`;
+          }).join('')
+        : '<div style="color:var(--text-muted);font-size:0.82rem;padding:12px 0;">Бұзушылықтар жоқ</div>';
+
+      // Leaderboard (top risk)
+      const sorted = [...list].sort((a, b) => b.cheatScore - a.cheatScore).slice(0, 6);
+      document.getElementById('leaderTable').innerHTML = sorted.map(s => {
+        const risk = riskLevel(s.cheatScore);
+        const color = risk==='high'?'#ff5050':risk==='mid'?'var(--accent-yellow)':'var(--accent)';
+        return `<tr>
+          <td><div style="font-weight:500;color:var(--text-primary)">${s.studentName}</div></td>
+          <td><div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-weight:700;color:${color}">${s.cheatScore}%</span>
+            <div class="progress-bar" style="width:60px;"><div class="progress-fill" style="width:${s.cheatScore}%;background:${color}"></div></div>
+          </div></td>
+          <td style="color:var(--text-muted)">${s.violations?.length || 0}</td>
+          <td><button class="btn btn-ghost" style="font-size:0.72rem;padding:5px 10px;" onclick="terminateSession(${s.id})">⛔ Тоқтату</button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function terminateSession(id) {
+      if (!confirm('Студенттің сессиясын тоқтатасыз ба?')) return;
+      try { await apiFetch(`${API_BASE}/sessions/${id}/terminate`, { method: 'PATCH' }); loadSessions(); }
+      catch (e) { alert('Қате: ' + e.message); }
+    }
+
+    function filterStudents(v) {
+      const examId = examSelect?.value;
+      const filtered = examId ? allSessions.filter(s => String(s.examId) === examId) : allSessions;
+      renderGrid(filtered, v);
+    }
+
+    async function loadExams() {
+      try {
+        const exams = await ExamAPI.getMine();
+        if (!examSelect) return;
+        examSelect.innerHTML = '<option value="">Барлық емтихандар</option>' +
+          exams.map(e => `<option value="${e.id}">${e.title}</option>`).join('');
+        examSelect.addEventListener('change', () => filterStudents('all'));
+      } catch {}
+    }
+
+    async function loadSessions() {
+      try {
+        const examId = examSelect?.value;
+        allSessions = examId
+          ? await SessionAPI.getByExam(examId)
+          : (await ExamAPI.getMine()).flatMap ? [] : [];
+
+        if (!examId) {
+          // Load sessions for all my exams
+          const exams = await ExamAPI.getMine();
+          const active = exams.filter(e => e.status === 'ACTIVE');
+          const results = await Promise.all(active.map(e => SessionAPI.getByExam(e.id).catch(() => [])));
+          allSessions = results.flat();
+        }
+
+        renderGrid(allSessions, 'all');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    (async () => {
+      await loadExams();
+      await loadSessions();
+      setInterval(loadSessions, 15000);
+    })();
+  </script>
+</body>
+</html>

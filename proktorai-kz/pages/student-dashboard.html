@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProctorAI — Студент Кабинеті</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <nav class="navbar">
+    <div class="nav-logo">
+      <div class="logo-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="13" stroke="var(--accent)" stroke-width="1.5"/>
+          <circle cx="14" cy="14" r="3" fill="var(--accent)"/>
+        </svg>
+      </div>
+      <span class="logo-text">Proctor<em>AI</em></span>
+    </div>
+    <div class="nav-links">
+      <a href="../index.html" class="nav-link">← Кіру</a>
+      <a href="teacher-dashboard.html" class="nav-link">Оқытушы</a>
+      <a href="exam-room.html" class="nav-link">Емтихан бөлмесі</a>
+      <a href="admin-dashboard.html" class="nav-link">Әкімші</a>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Шолу</div>
+        <a href="#" class="sidebar-item active"><span class="icon">🏠</span> Басты бет</a>
+        <a href="#" class="sidebar-item"><span class="icon">📋</span> Емтихандарым <span class="badge-count">2</span></a>
+        <a href="#" class="sidebar-item"><span class="icon">📊</span> Нәтижелер</a>
+        <a href="#" class="sidebar-item"><span class="icon">📅</span> Кесте</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Аккаунт</div>
+        <a href="#" class="sidebar-item"><span class="icon">👤</span> Профиль</a>
+        <a href="#" class="sidebar-item"><span class="icon">🔔</span> Хабарламалар <span class="badge-count">3</span></a>
+        <a href="#" class="sidebar-item"><span class="icon">⚙️</span> Параметрлер</a>
+        <a href="../index.html" class="sidebar-item"><span class="icon">🚪</span> Шығу</a>
+      </div>
+      <div style="position:absolute;bottom:24px;left:16px;right:16px;">
+        <div class="card" style="padding:16px;text-align:center;">
+          <div style="font-size:2rem;margin-bottom:8px;">👋</div>
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);margin-bottom:4px;">Әлібек Жақсыбеков</div>
+          <div style="font-size:0.73rem;color:var(--text-muted);">АТ-401 · Студент</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header fade-in">
+        <h1>Қайырлы таң, Әлібек 👋</h1>
+        <p>Осы аптада сізде <strong style="color:var(--accent)">2 алдағы емтихан</strong> бар. Дайындалыңыз!</p>
+      </div>
+
+      <div class="grid-4 fade-in-1" style="margin-bottom:28px;">
+        <div class="stat-card blue">
+          <div class="stat-card-icon">📝</div>
+          <div class="stat-card-value">12</div>
+          <div class="stat-card-label">Барлық Емтихан</div>
+          <div class="stat-card-change up">↑ 2 жаңа</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-card-icon">✅</div>
+          <div class="stat-card-value">9</div>
+          <div class="stat-card-label">Аяқталған</div>
+          <div class="stat-card-change up">75%</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-card-icon">🏆</div>
+          <div class="stat-card-value">84%</div>
+          <div class="stat-card-label">Орташа Балл</div>
+          <div class="stat-card-change up">↑ 6%</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-card-icon">⚡</div>
+          <div class="stat-card-value">2</div>
+          <div class="stat-card-label">Алдағы</div>
+          <div class="stat-card-change" style="color:var(--accent-yellow)">Осы апта</div>
+        </div>
+      </div>
+
+      <div class="grid-2 fade-in-2" style="margin-bottom:28px;">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">Алдағы Емтихандар</h3>
+            <a href="#" class="btn btn-ghost" style="font-size:0.78rem;padding:6px 12px;">Барлығын көру</a>
+          </div>
+          <div id="activeExamsList">
+          <div class="exam-item" style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;background:var(--surface-2);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+              <div>
+                <div style="font-weight:600;font-size:0.9rem;margin-bottom:4px;">Деректер Құрылымдары және Алгоритмдер</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);">Проф. Айбек Нұрланович</div>
+              </div>
+              <span class="badge badge-red">Жақында</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">
+              <span>📅 10 мамыр 2026</span>
+              <span>⏱️ 90 мин</span>
+              <span>🎥 Толық бақылау</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:0.78rem;color:var(--accent);">2 күннен кейін басталады</div>
+              <a href="exam-room.html" class="btn btn-primary" style="font-size:0.8rem;padding:8px 16px;">Дайындалу →</a>
+            </div>
+          </div>
+          <div class="exam-item" style="border:1px solid var(--border);border-radius:10px;padding:16px;background:var(--surface-2);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+              <div>
+                <div style="font-weight:600;font-size:0.9rem;margin-bottom:4px;">Дерекқорды Басқару Жүйелері</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);">Проф. Гүлмира Сейткали</div>
+              </div>
+              <span class="badge badge-blue">Жоспарланған</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">
+              <span>📅 14 мамыр 2026</span>
+              <span>⏱️ 120 мин</span>
+              <span>🎥 Прокторинг</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:0.78rem;color:var(--text-muted);">6 күннен кейін басталады</div>
+              <a href="#" class="btn btn-ghost" style="font-size:0.8rem;padding:8px 16px;">Толығырақ</a>
+            </div>
+          </div>
+          </div><!-- /activeExamsList -->
+        </div>
+
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">Соңғы Нәтижелер</h3>
+            <span class="badge badge-green">9 аяқталды</span>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Пән</th><th>Балл</th><th>Мәртебе</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="font-weight:500;color:var(--text-primary);">Операциялық Жүйелер</div><div style="font-size:0.75rem;color:var(--text-muted);">28 сәу. 2026</div></td>
+                <td><div style="font-weight:700;color:var(--accent-green);">92%</div><div class="progress-bar" style="width:80px;margin-top:4px;"><div class="progress-fill green" style="width:92%;"></div></div></td>
+                <td><span class="badge badge-green">Өтті</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:500;color:var(--text-primary);">Компьютерлік Желілер</div><div style="font-size:0.75rem;color:var(--text-muted);">21 сәу. 2026</div></td>
+                <td><div style="font-weight:700;color:var(--accent-yellow);">78%</div><div class="progress-bar" style="width:80px;margin-top:4px;"><div class="progress-fill blue" style="width:78%;"></div></div></td>
+                <td><span class="badge badge-green">Өтті</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:500;color:var(--text-primary);">Бағдарламалық Инженерия</div><div style="font-size:0.75rem;color:var(--text-muted);">15 сәу. 2026</div></td>
+                <td><div style="font-weight:700;color:var(--accent);">85%</div><div class="progress-bar" style="width:80px;margin-top:4px;"><div class="progress-fill blue" style="width:85%;"></div></div></td>
+                <td><span class="badge badge-green">Өтті</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:500;color:var(--text-primary);">Дискретті Математика</div><div style="font-size:0.75rem;color:var(--text-muted);">8 сәу. 2026</div></td>
+                <td><div style="font-weight:700;color:#ff7070;">61%</div><div class="progress-bar" style="width:80px;margin-top:4px;"><div class="progress-fill red" style="width:61%;"></div></div></td>
+                <td><span class="badge badge-yellow">Шекаралық</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="fade-in-3">
+        <div class="card" style="background:linear-gradient(135deg,rgba(79,142,255,0.08),rgba(123,95,255,0.08));border-color:rgba(79,142,255,0.2);">
+          <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px;">📌 Емтихан Ережелері мен Талаптары</h3>
+          <div class="grid-3" style="gap:16px;">
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <span style="font-size:1.3rem;">📷</span>
+              <div><div style="font-size:0.85rem;font-weight:600;margin-bottom:4px;">Камера міндетті</div><div style="font-size:0.78rem;color:var(--text-muted);">Емтихан барысында бетіңіз көрінетін және жақсы жарықталған болуын қамтамасыз етіңіз.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <span style="font-size:1.3rem;">🖥️</span>
+              <div><div style="font-size:0.85rem;font-weight:600;margin-bottom:4px;">Тек бір қойынды</div><div style="font-size:0.78rem;color:var(--text-muted);">Қойынды ауыстыру автоматты түрде анықталып журналға жазылады.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <span style="font-size:1.3rem;">📋</span>
+              <div><div style="font-size:0.85rem;font-weight:600;margin-bottom:4px;">Көшіру/қою жоқ</div><div style="font-size:0.78rem;color:var(--text-muted);">Барлық Ctrl+C / Ctrl+V әрекеттері тіркеліп тексеріледі.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/api.js"></script>
+  <script>
+// ── Auth guard + user info ────────────────────────────────────
+Auth.check();
+const user = Auth.user();
+if (user) {
+  // Пайдаланушы атын жаңарту
+  document.querySelectorAll('.user-name-placeholder').forEach(el => el.textContent = user.fullName);
+  const greeting = document.querySelector('.page-header h1');
+  if (greeting) greeting.textContent = `Қайырлы таң, ${user.fullName.split(' ')[0]} 👋`;
+  const userCard = document.querySelector('.sidebar .card div[style*="font-weight:600"]');
+  if (userCard) userCard.textContent = user.fullName;
+}
+
+// ── Logout ────────────────────────────────────────────────────
+document.querySelectorAll('a[href*="index.html"]').forEach(a => {
+  if (a.textContent.includes('Шығу') || a.textContent.includes('←')) return;
+  a.addEventListener('click', e => { e.preventDefault(); Auth.clear(); window.location.href = '../index.html'; });
+});
+document.querySelectorAll('.sidebar-item').forEach(item => {
+  if (item.textContent.trim().startsWith('🚪')) {
+    item.addEventListener('click', e => { e.preventDefault(); Auth.clear(); window.location.href = '../index.html'; });
+  }
+});
+
+// ── Белсенді емтихандарды жүктеу ─────────────────────────────
+async function loadActiveExams() {
+  try {
+    const exams = await ExamAPI.getActive();
+    const container = document.getElementById('activeExamsList');
+    if (!container) return;
+    if (!exams || exams.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Белсенді емтихан жоқ</p>';
+      return;
+    }
+    container.innerHTML = exams.map(exam => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;background:var(--surface-2);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-weight:600;font-size:0.9rem;margin-bottom:4px;">${exam.title}</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);">${exam.description || ''}</div>
+          </div>
+          <span class="badge badge-green">Белсенді</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">
+          <span>⏱️ ${exam.durationMinutes} мин</span>
+          <span>🎥 Толық бақылау</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <a href="exam-room.html?examId=${exam.id}" class="btn btn-primary" style="font-size:0.8rem;padding:8px 16px;">Бастау →</a>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.warn('Емтихандарды жүктеу қатесі:', e);
+  }
+}
+
+// ── Сессия тарихын жүктеу ─────────────────────────────────────
+async function loadMySessions() {
+  try {
+    const sessions = await SessionAPI.getMy();
+    const countEl = document.querySelector('.stat-card.green .stat-card-value');
+    if (countEl) countEl.textContent = sessions.filter(s => s.status === 'COMPLETED').length;
+  } catch (e) {
+    console.warn('Сессияларды жүктеу қатесі:', e);
+  }
+}
+
+loadActiveExams();
+loadMySessions();
+
+    document.querySelectorAll('.stat-card-value').forEach(el => {
+      const text = el.textContent;
+      if (!isNaN(parseInt(text))) {
+        const target = parseInt(text), suffix = text.replace(/[0-9]/g,'');
+        let cur = 0;
+        const t = setInterval(() => { cur = Math.min(cur + Math.ceil(target/30), target); el.textContent = cur + suffix; if(cur>=target) clearInterval(t); }, 30);
+      }
+    });
+  </script>
+</body>
+</html>

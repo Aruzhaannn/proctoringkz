@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProctorAI — Зияткерлік Емтихан Бақылауы</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/login.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <nav class="navbar">
+    <div class="nav-logo">
+      <div class="logo-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="13" stroke="var(--accent)" stroke-width="1.5"/>
+          <circle cx="14" cy="14" r="6" fill="var(--accent)" opacity="0.2"/>
+          <circle cx="14" cy="14" r="3" fill="var(--accent)"/>
+          <line x1="14" y1="1" x2="14" y2="6" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="14" y1="22" x2="14" y2="27" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="1" y1="14" x2="6" y2="14" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="22" y1="14" x2="27" y2="14" stroke="var(--accent)" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <span class="logo-text">Proctor<em>AI</em></span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">Кіру</a>
+      <a href="pages/student-dashboard.html" class="nav-link">Студент</a>
+      <a href="pages/teacher-dashboard.html" class="nav-link">Оқытушы</a>
+      <a href="pages/admin-dashboard.html" class="nav-link">Әкімші</a>
+    </div>
+  </nav>
+
+  <main class="login-main">
+    <div class="login-left">
+      <div class="hero-badge">ЖИ-мен Жұмыс Жасайтын Прокторинг</div>
+      <h1 class="hero-title">Академиялық<br/><span class="gradient-text">Адалдық</span><br/>Жаңа Деңгейде.</h1>
+      <p class="hero-sub">Студенттерді құрметтей отырып, масштабта әділ және тексерілетін емтихандарды қамтамасыз ететін зияткерлік бақылау жүйесі.</p>
+      <div class="stats-row">
+        <div class="stat">
+          <span class="stat-num">99%</span>
+          <span class="stat-label">Қолжетімділік SLA</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-num">2с</span>
+          <span class="stat-label">Жауап Уақыты</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-num">ЖИ</span>
+          <span class="stat-label">Алдауды Анықтау</span>
+        </div>
+      </div>
+      <div class="features-list">
+        <div class="feature-item">
+          <div class="feat-dot"></div>
+          <span>Нақты уақыттағы камера және көз бақылауы</span>
+        </div>
+        <div class="feature-item">
+          <div class="feat-dot"></div>
+          <span>Қойынды ауыстыру және Ctrl+C/V анықтауы</span>
+        </div>
+        <div class="feature-item">
+          <div class="feat-dot"></div>
+          <span>ЖИ негізіндегі алдау ықтималдығы (0–100%)</span>
+        </div>
+        <div class="feature-item">
+          <div class="feat-dot"></div>
+          <span>Микросервистер • Kubernetes • Kafka</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-right">
+      <div class="login-card">
+        <div class="card-header">
+          <h2>Қош келдіңіз</h2>
+          <p>Жалғастыру үшін аккаунтқа кіріңіз</p>
+        </div>
+        <div class="role-tabs">
+          <button class="role-tab active" data-role="student">Студент</button>
+          <button class="role-tab" data-role="teacher">Оқытушы</button>
+          <button class="role-tab" data-role="admin">Әкімші</button>
+        </div>
+        <form class="login-form" id="loginForm">
+          <div class="form-group">
+            <label>Электрондық пошта</label>
+            <input type="email" placeholder="сіз@университет.kz" autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label>Құпия сөз</label>
+            <div class="input-wrap">
+              <input type="password" placeholder="••••••••" id="passInput" autocomplete="current-password" />
+              <button type="button" class="toggle-pass" onclick="togglePass()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label class="checkbox-label">
+              <input type="checkbox" /> Мені есте сақта
+            </label>
+            <a href="#" class="forgot-link">Құпия сөзді ұмыттыңыз ба?</a>
+          </div>
+          <button type="submit" class="btn-login" id="loginBtn">
+            <span class="btn-text">Жүйеге кіру</span>
+            <div class="btn-arrow">→</div>
+          </button>
+        </form>
+        <div class="card-footer">
+          <p>JWT аутентификациясы және AES-256 шифрлауымен қорғалған</p>
+          <div class="security-icons">
+            <span>🔐 OAuth2</span>
+            <span>🛡️ HTTPS</span>
+            <span>🔑 JWT</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

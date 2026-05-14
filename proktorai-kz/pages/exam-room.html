@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProctorAI — Емтихан Бөлмесі</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <script src="../js/api.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    body { overflow: hidden; }
+    .exam-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: 64px 1fr;
+      height: 100vh;
+    }
+    .exam-navbar {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    .exam-info { display: flex; align-items: center; gap: 20px; }
+    .exam-title { font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
+    .exam-status-bar { display: flex; align-items: center; gap: 16px; }
+    .timer {
+      font-family: var(--font-display); font-size: 1.4rem; font-weight: 800;
+      letter-spacing: 0.05em; color: var(--accent-yellow);
+    }
+    .timer.warning { color: #ff5050; animation: pulse-dot 0.8s ease infinite; }
+
+    /* Емтихан мазмұны */
+    .exam-content {
+      overflow-y: auto; padding: 36px 48px;
+      background: var(--bg); position: relative; z-index: 1;
+    }
+    .exam-progress-bar { display: flex; gap: 6px; margin-bottom: 32px; }
+    .q-dot { height: 4px; flex: 1; border-radius: 2px; background: var(--surface-3); transition: background 0.3s ease; }
+    .q-dot.answered { background: var(--accent); }
+    .q-dot.current { background: var(--accent-2); }
+
+    .question-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px; margin-bottom: 20px;
+    }
+    .question-num {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+    }
+    .question-text { font-size: 1.1rem; font-weight: 500; line-height: 1.6; color: var(--text-primary); margin-bottom: 28px; }
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .option {
+      display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+      border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+      transition: var(--transition); background: var(--bg);
+    }
+    .option:hover { border-color: var(--accent); background: rgba(79,142,255,0.06); }
+    .option.selected { border-color: var(--accent); background: rgba(79,142,255,0.1); }
+    .option-letter {
+      width: 28px; height: 28px; border-radius: 50%; background: var(--surface-3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); flex-shrink: 0;
+    }
+    .option.selected .option-letter { background: var(--accent); color: #fff; }
+    .option-text { font-size: 0.9rem; color: var(--text-secondary); }
+    .option.selected .option-text { color: var(--text-primary); }
+    .question-nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+
+    /* ======== ПРОКТОРИНГ ПАНЕЛІ — НАҚТЫ КАМЕРА ======== */
+    .proctor-sidebar {
+      background: var(--bg-2); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow-y: auto;
+    }
+
+    /* Камера контейнері */
+    .camera-container {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      background: #000;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    /* Нақты камера бейнесі */
+    #realCamera {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* айна */
+      display: block;
+    }
+
+    /* Камера ашылмаса — placeholder */
+    .cam-placeholder {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, #0a0f1e, #111827);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px;
+    }
+    .cam-placeholder.hidden { display: none; }
+
+    /* Бет анықтау рамкасы */
+    .face-overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+    }
+    #faceBox {
+      position: absolute;
+      border: 2px solid var(--accent-green);
+      border-radius: 6px;
+      box-shadow: 0 0 20px rgba(45,212,160,0.4);
+      transition: all 0.2s ease;
+      display: none;
+    }
+    #faceBox.visible { display: block; }
+
+    /* Бет бұрыштары */
+    .fc { position: absolute; width: 12px; height: 12px; }
+    .fc::before, .fc::after { content:''; position:absolute; background:var(--accent-green); }
+    .fc::before { width:100%; height:2px; }
+    .fc::after  { width:2px; height:100%; }
+    .fc.tl { top:-2px; left:-2px; }
+    .fc.tr { top:-2px; right:-2px; } .fc.tr::after { right:0; left:auto; }
+    .fc.bl { bottom:-2px; left:-2px; } .fc.bl::before { bottom:0; top:auto; }
+    .fc.br { bottom:-2px; right:-2px; } .fc.br::before { bottom:0; top:auto; } .fc.br::after { right:0; left:auto; }
+
+    /* Сканерлеу сызығы */
+    .scan-line {
+      position: absolute; left:0; right:0; height:2px;
+      background: linear-gradient(90deg, transparent, var(--accent-green), transparent);
+      animation: scanLine 2.5s ease-in-out infinite;
+    }
+    @keyframes scanLine { 0%{top:0} 50%{top:100%} 100%{top:0} }
+
+    /* Камера мәртебесі */
+    .camera-status-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 8px 12px;
+      background: linear-gradient(0deg, rgba(0,0,0,0.85), transparent);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cam-rec-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.68rem; color: var(--accent-green); font-weight: 600;
+    }
+    .rec-dot { width:6px; height:6px; border-radius:50%; background:#ff5050; animation: pulse-dot 1s ease infinite; }
+    .cam-face-status { font-size: 0.68rem; font-weight: 600; }
+    .cam-face-status.ok  { color: var(--accent-green); }
+    .cam-face-status.bad { color: #ff5050; }
+    .cam-face-status.loading { color: var(--accent-yellow); }
+
+    /* Камера ашылмаса */
+    .cam-error-msg {
+      font-size: 0.72rem; color: var(--accent-yellow); text-align: center;
+      padding: 0 16px; font-weight: 500;
+    }
+
+    /* Mic деңгей визуализациясы */
+    .mic-bar-wrap {
+      display: flex; gap: 2px; align-items: flex-end; height: 16px;
+    }
+    .mic-bar {
+      width: 3px; border-radius: 2px; background: var(--accent-green);
+      transition: height 0.1s ease;
+      min-height: 2px;
+    }
+
+    /* Бақылау панелі */
+    .monitor-panel { padding: 20px; flex: 1; }
+    .monitor-title {
+      font-family: var(--font-display); font-size: 0.85rem; font-weight: 700;
+      margin-bottom: 16px; color: var(--text-secondary);
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .monitor-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem;
+    }
+    .monitor-item:last-child { border-bottom: none; }
+    .monitor-label { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+    .monitor-val { font-weight: 600; font-size: 0.8rem; }
+
+    /* Алдау баллы */
+    .cheat-score-section { padding: 20px; border-top: 1px solid var(--border); }
+    .cheat-score-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+    .cheat-score-display { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 10px; }
+    .cheat-score-num { font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; letter-spacing: -0.04em; color: var(--accent-green); }
+    .cheat-score-pct { font-size: 1rem; color: var(--text-muted); margin-bottom: 8px; }
+    .cheat-score-desc { font-size: 0.75rem; color: var(--accent-green); margin-bottom: 10px; }
+
+    /* Журнал */
+    .log-section { padding: 0 20px 20px; }
+    .log-item { font-size: 0.73rem; color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .log-item:last-child { border-bottom: none; }
+    .log-time { color: var(--text-muted); flex-shrink: 0; }
+    .log-ok   { color: var(--accent-green); }
+    .log-warn { color: var(--accent-yellow); }
+
+    /* Сұрақтар навигаторы */
+    .q-navigator { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 20px; border-top: 1px solid var(--border); }
+    .q-nav-btn {
+      aspect-ratio: 1; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--surface-3); color: var(--text-muted);
+      font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      transition: var(--transition); display: flex; align-items: center; justify-content: center;
+    }
+    .q-nav-btn.answered { background: rgba(79,142,255,0.2); color: var(--accent); border-color: rgba(79,142,255,0.3); }
+    .q-nav-btn.current  { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Камераға рұқсат сұрау модалі */
+    .permission-modal {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(5,8,16,0.92); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .permission-modal.hidden { display: none; }
+    .permission-box {
+      background: var(--surface); border: 1px solid var(--border-2);
+      border-radius: 20px; padding: 40px;
+      max-width: 440px; text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 40px rgba(79,142,255,0.1);
+    }
+    .permission-icon { font-size: 3rem; margin-bottom: 16px; }
+    .permission-box h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; }
+    .permission-box p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 24px; }
+    .permission-list { text-align: left; background: var(--surface-2); border-radius: 10px; padding: 16px; margin-bottom: 24px; }
+    .permission-list li { font-size: 0.85rem; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border); list-style: none; display: flex; align-items: center; gap: 10px; }
+    .permission-list li:last-child { border-bottom: none; }
+    .perm-error { color: #ff5050; font-size: 0.82rem; margin-top: 12px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <!-- Камераға рұқсат сұрау модалі -->
+  <div class="permission-modal" id="permModal">
+    <div class="permission-box">
+      <div class="permission-icon">🎥</div>
+      <h2>Камераға рұқсат қажет</h2>
+      <p>ProctorAI прокторинг жүйесі емтихан барысында сізді бақылау үшін камераңызға және микрофоныңызға қол жеткізуді қажет етеді.</p>
+      <ul class="permission-list">
+        <li>📷 Камера — бет анықтау және бақылау</li>
+        <li>🎙️ Микрофон — дыбыс мониторингі</li>
+        <li>🔒 Деректер тек емтихан сессиясында пайдаланылады</li>
+      </ul>
+      <button class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;" onclick="requestCamera()">
+        📷 Камера мен микрофонға рұқсат беру
+      </button>
+      <p class="perm-error" id="permError">⚠ Камераға қол жетімділік қателігі. Браузер параметрлерінен рұқсат беріңіз.</p>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:12px;">Рұқсатты кейіннен браузер параметрлерінен өзгертуге болады</p>
+    </div>
+  </div>
+
+  <div class="exam-layout">
+    <!-- Жоғарғы панель -->
+    <div class="exam-navbar">
+      <div class="exam-info">
+        <span class="logo-text">Proctor<em>AI</em></span>
+        <div style="width:1px;height:20px;background:var(--border);"></div>
+        <span class="exam-title">Деректер Құрылымдары және Алгоритмдер — Аралық Бақылау</span>
+        <span class="badge badge-red">
+          <span class="status-dot danger"></span> ТІКЕЛЕЙ ПРОКТОРИНГ
+        </span>
+      </div>
+      <div class="exam-status-bar">
+        <div style="font-size:0.8rem;color:var(--text-muted);">Сұрақ <strong id="curQ" style="color:var(--text-primary);">7</strong> / 25</div>
+        <div style="width:1px;height:20px;background:var(--border);"></div>
+        <div class="timer" id="timer">01:12:45</div>
+        <button onclick="submitExam()" class="btn btn-primary" style="font-size:0.82rem;">Емтиханды тапсыру</button>
+      </div>
+    </div>
+
+    <!-- Сұрақтар аймағы -->
+    <div class="exam-content">
+      <div class="exam-progress-bar" id="progressBar"></div>
+
+      <div class="question-card fade-in">
+        <div class="question-num">7-сұрақ / 25 · Орташа · 4 ұпай</div>
+        <div class="question-text">
+          <em>n</em> түйіні бар теңдестірілген Екілік Іздеу Ағашында (BST) элементті іздеудің уақыттық күрделілігі қандай?
+        </div>
+        <div class="options-grid">
+          <div class="option" onclick="selectOption(this)">
+            <div class="option-letter">А</div>
+            <div class="option-text">O(n) — сызықтық уақыт</div>
+          </div>
+          <div class="option selected" onclick="selectOption(this)">
+            <div class="option-letter">Б</div>
+            <div class="option-text">O(log n) — логарифмдік уақыт</div>
+          </div>
+          <div class="option" onclick="selectOption(this)">
+            <div class="option-letter">В</div>
+            <div class="option-text">O(n log n) — сызықтық-логарифмдік уақыт</div>
+          </div>
+          <div class="option" onclick="selectOption(this)">
+            <div class="option-letter">Г</div>
+            <div class="option-text">O(1) — тұрақты уақыт</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="question-nav">
+        <button class="btn btn-ghost" onclick="navigate(-1)">← Алдыңғы</button>
+        <div style="font-size:0.82rem;color:var(--text-muted);">
+          <span style="color:var(--accent)">●</span> 6 жауапталды &nbsp;
+          <span style="color:var(--text-muted)">●</span> 18 қалды
+        </div>
+        <button class="btn btn-primary" onclick="navigate(1)">Келесі →</button>
+      </div>
+
+      <div class="question-card" style="opacity:0.5;">
+        <div class="question-num">8-сұрақ / 25 · Қиын · 6 ұпай</div>
+        <div class="question-text">
+          Кадане алгоритмін пайдаланып бүтін сандар массивінде максималды қосындысы бар үзіліссіз ішмассивті табыңыз. Алгоритмнің ең жақсы уақыттық күрделілігі қандай?
+        </div>
+        <div style="color:var(--text-muted);font-size:0.85rem;font-style:italic;">Жауап беру үшін осы сұраққа өтіңіз.</div>
+      </div>
+    </div>
+
+    <!-- Прокторинг бүйір панелі -->
+    <div class="proctor-sidebar">
+
+      <!-- ===== НАҚТЫ КАМЕРА ===== -->
+      <div class="camera-container">
+        <!-- Нақты бейне ағыны -->
+        <video id="realCamera" autoplay playsinline muted></video>
+
+        <!-- Камера жүктелмесе placeholder -->
+        <div class="cam-placeholder" id="camPlaceholder">
+          <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+            <div class="scan-line"></div>
+            <div style="width:80px;height:90px;border:2px solid var(--accent-green);border-radius:6px;position:relative;box-shadow:0 0 20px rgba(45,212,160,0.3);">
+              <div class="fc tl"></div><div class="fc tr"></div><div class="fc bl"></div><div class="fc br"></div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--accent-yellow);font-weight:600;" id="camLoadMsg">Камера жүктелуде...</div>
+          </div>
+        </div>
+
+        <!-- Бет анықтау рамкасы (камера ашылған кезде) -->
+        <div class="face-overlay">
+          <div id="faceBox">
+            <div class="fc tl"></div><div class="fc tr"></div><div class="fc bl"></div><div class="fc br"></div>
+          </div>
+          <div class="scan-line" id="activeScanLine" style="display:none;"></div>
+        </div>
+
+        <!-- Мәртебе жолағы -->
+        <div class="camera-status-bar">
+          <div class="cam-rec-label">
+            <div class="rec-dot"></div> ЖАЗ · БАҚЫЛАУ
+          </div>
+          <div class="cam-face-status loading" id="faceStatus">Күтілуде...</div>
+        </div>
+      </div>
+
+      <!-- Бақылау параметрлері -->
+      <div class="monitor-panel">
+        <div class="monitor-title">Тікелей бақылау</div>
+        <div class="monitor-item">
+          <div class="monitor-label"><span>👁️</span> Көз бақылауы</div>
+          <span class="monitor-val" id="eyeVal" style="color:var(--accent-green);">Белсенді</span>
+        </div>
+        <div class="monitor-item">
+          <div class="monitor-label"><span>🎙️</span> Микрофон</div>
+          <span class="monitor-val" id="micVal" style="color:var(--accent-green);">
+            <div class="mic-bar-wrap" id="micBars">
+              <div class="mic-bar" style="height:4px;"></div>
+              <div class="mic-bar" style="height:8px;"></div>
+              <div class="mic-bar" style="height:5px;"></div>
+              <div class="mic-bar" style="height:12px;"></div>
+              <div class="mic-bar" style="height:6px;"></div>
+            </div>
+          </span>
+        </div>
+        <div class="monitor-item">
+          <div class="monitor-label"><span>🖥️</span> Қойынды ауыстыру</div>
+          <span class="monitor-val" id="tabCount" style="color:var(--accent-green);">0</span>
+        </div>
+        <div class="monitor-item">
+          <div class="monitor-label"><span>📋</span> Көшіру/қою</div>
+          <span class="monitor-val" id="pasteCount" style="color:var(--accent-green);">0</span>
+        </div>
+        <div class="monitor-item">
+          <div class="monitor-label"><span>👤</span> Жеке куәлік</div>
+          <span class="monitor-val" style="color:var(--accent-green);">Расталды ✓</span>
+        </div>
+        <div class="monitor-item">
+          <div class="monitor-label"><span>📡</span> Қосылым</div>
+          <span class="monitor-val" style="color:var(--accent-green);">Тұрақты</span>
+        </div>
+        <div class="monitor-item">
+          <div class="monitor-label"><span>📷</span> Камера</div>
+          <span class="monitor-val" id="camStatus" style="color:var(--accent-yellow);">Жүктелуде...</span>
+        </div>
+      </div>
+
+      <!-- ЖИ Адалдық Баллы -->
+      <div class="cheat-score-section">
+        <div class="cheat-score-label">ЖИ Адалдық Баллы</div>
+        <div class="cheat-score-display">
+          <div class="cheat-score-num" id="cheatScore">4</div>
+          <div class="cheat-score-pct">%</div>
+        </div>
+        <div class="progress-bar" style="margin-bottom:8px;">
+          <div class="progress-fill green" id="cheatBar" style="width:4%;"></div>
+        </div>
+        <div class="cheat-score-desc" id="cheatDesc">✓ Төмен қауіп — мінез-құлық қалыпты</div>
+      </div>
+
+      <!-- Іс-шаралар журналы -->
+      <div class="log-section">
+        <div class="monitor-title" style="font-size:0.7rem;margin-bottom:8px;">Іс-шаралар журналы</div>
+        <div id="logList">
+          <div class="log-item"><span class="log-time" id="t1">--:--</span><span class="log-ok">✓</span><span>Емтихан басталды</span></div>
+          <div class="log-item"><span class="log-time" id="t2">--:--</span><span class="log-ok">✓</span><span>Жеке куәлік расталды</span></div>
+          <div class="log-item" id="camLogItem" style="display:none;">
+            <span class="log-time" id="camLogTime">--:--</span>
+            <span class="log-ok">✓</span>
+            <span id="camLogMsg">Камера қосылды</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Сұрақтар картасы -->
+      <div class="q-navigator" id="qNav"></div>
+    </div>
+  </div>
+
+  <script>
+  // ============================================================
+  // НАҚТЫ УАҚЫТТАҒЫ КАМЕРА — WebRTC getUserMedia
+  // ============================================================
+  let cameraStream = null;
+  let faceDetectInterval = null;
+  let micAnalyser = null;
+  let micAnimFrame = null;
+
+  async function requestCamera() {
+    document.getElementById('permModal').classList.add('hidden');
+    await startCamera();
+  }
+
+  async function startCamera() {
+    try {
+      const constraints = {
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        audio: true
+      };
+      cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      const video = document.getElementById('realCamera');
+      video.srcObject = cameraStream;
+      video.onloadedmetadata = () => {
+        video.play();
+        document.getElementById('camPlaceholder').classList.add('hidden');
+        document.getElementById('activeScanLine').style.display = 'block';
+        document.getElementById('camStatus').textContent = 'Қосылды ✓';
+        document.getElementById('camStatus').style.color = 'var(--accent-green)';
+        document.getElementById('faceStatus').textContent = 'Бет іздеуде...';
+        document.getElementById('faceStatus').className = 'cam-face-status loading';
+        addLog('Камера сәтті қосылды', 'ok');
+        startFaceSimulation();
+        startMicMonitor();
+      };
+    } catch (err) {
+      handleCameraError(err);
+    }
+  }
+
+  function handleCameraError(err) {
+    const msg = err.name === 'NotAllowedError'
+      ? 'Камераға рұқсат берілмеді'
+      : err.name === 'NotFoundError'
+      ? 'Камера табылмады'
+      : 'Камера қателігі: ' + err.message;
+
+    document.getElementById('camLoadMsg').textContent = '⚠ ' + msg;
+    document.getElementById('camLoadMsg').style.color = '#ff5050';
+    document.getElementById('camPlaceholder').classList.remove('hidden');
+    document.getElementById('camStatus').textContent = 'Қате ❌';
+    document.getElementById('camStatus').style.color = '#ff5050';
+    document.getElementById('faceStatus').textContent = 'Камера жоқ';
+    document.getElementById('faceStatus').className = 'cam-face-status bad';
+    document.getElementById('permError').style.display = 'block';
+    document.getElementById('permModal').classList.remove('hidden');
+    addLog('⚠ ' + msg, 'warn');
+  }
+
+  // Бет анықтауды симуляциялау (нақты ML Face Detection қосу үшін TensorFlow.js қажет)
+  // Бұл жерде геометриялық орналасу арқылы бет рамкасын өлшеміне сай көрсетеміз
+  let faceVisible = false;
+  let faceAwayCount = 0;
+
+  function startFaceSimulation() {
+    const video = document.getElementById('realCamera');
+    const faceBox = document.getElementById('faceBox');
+    const container = video.parentElement;
+
+    faceDetectInterval = setInterval(() => {
+      if (!cameraStream || !cameraStream.active) return;
+
+      const vTrack = cameraStream.getVideoTracks()[0];
+      const settings = vTrack ? vTrack.getSettings() : {};
+      const vw = container.offsetWidth;
+      const vh = container.offsetHeight;
+
+      // Камера ағыны бар — бетті ортада көрсетеміз
+      const bw = Math.round(vw * 0.38);
+      const bh = Math.round(bw * 1.15);
+      const bx = Math.round((vw - bw) / 2);
+      const by = Math.round((vh - bh) / 2) - 10;
+
+      faceBox.style.width  = bw + 'px';
+      faceBox.style.height = bh + 'px';
+      faceBox.style.left   = bx + 'px';
+      faceBox.style.top    = by + 'px';
+      faceBox.classList.add('visible');
+
+      // Кездейсоқ «бет жоқ» симуляциясы (5% ықтималдық)
+      if (Math.random() < 0.05) {
+        faceBox.classList.remove('visible');
+        document.getElementById('faceStatus').textContent = '⚠ Бет табылмады!';
+        document.getElementById('faceStatus').className = 'cam-face-status bad';
+        faceAwayCount++;
+        if (faceAwayCount > 3) {
+          updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5 + faceAwayCount * 4);
+          addLog('⚠ Бет экраннан аулақтап кетті!', 'warn');
+          faceAwayCount = 0;
+        }
+      } else {
+        faceBox.classList.add('visible');
+        document.getElementById('faceStatus').textContent = '✓ Бет анықталды';
+        document.getElementById('faceStatus').className = 'cam-face-status ok';
+      }
+    }, 1000);
+
+    setTimeout(() => {
+      document.getElementById('faceStatus').textContent = '✓ Бет анықталды';
+      document.getElementById('faceStatus').className = 'cam-face-status ok';
+    }, 1500);
+  }
+
+  // Микрофон деңгейін визуализациялау
+  function startMicMonitor() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = audioCtx.createMediaStreamSource(cameraStream);
+      micAnalyser = audioCtx.createAnalyser();
+      micAnalyser.fftSize = 256;
+      src.connect(micAnalyser);
+      const dataArr = new Uint8Array(micAnalyser.frequencyBinCount);
+      const bars = document.querySelectorAll('.mic-bar');
+
+      function drawMic() {
+        micAnimFrame = requestAnimationFrame(drawMic);
+        micAnalyser.getByteFrequencyData(dataArr);
+        const slice = Math.floor(dataArr.length / bars.length);
+        bars.forEach((bar, i) => {
+          const val = dataArr[i * slice] / 255;
+          const h = Math.max(2, Math.round(val * 16));
+          bar.style.height = h + 'px';
+          bar.style.background = val > 0.6 ? '#ff5050' : val > 0.3 ? 'var(--accent-yellow)' : 'var(--accent-green)';
+        });
+        // Дыбыс деңгейі жоғары болса
+        const avg = dataArr.slice(0, 20).reduce((a, b) => a + b, 0) / 20;
+        if (avg > 50) {
+          document.getElementById('eyeVal').textContent = 'Дыбыс бар!';
+          document.getElementById('eyeVal').style.color = 'var(--accent-yellow)';
+        } else {
+          document.getElementById('eyeVal').textContent = 'Белсенді';
+          document.getElementById('eyeVal').style.color = 'var(--accent-green)';
+        }
+      }
+      drawMic();
+    } catch(e) {
+      console.warn('Mic monitor error:', e);
+    }
+  }
+
+  // Камера бар-жоғын тексеру
+  async function checkCameraAvailability() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      document.getElementById('permModal').classList.remove('hidden');
+      document.getElementById('camLoadMsg').textContent = '⚠ Браузер камераны қолдамайды';
+      return;
+    }
+    // Автоматты рұқсат сұрауды бастаймыз
+    document.getElementById('permModal').classList.remove('hidden');
+  }
+
+  // ============================================================
+  // ҚОЙЫНДЫ АУЫСТЫРУ МЕН КӨШІРУ/ҚОЮ АНЫҚТАУЫ
+  // ============================================================
+  let cheatTabCount = 0, cheatPasteCount = 0;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      cheatTabCount++;
+      const el = document.getElementById('tabCount');
+      el.textContent = cheatTabCount;
+      el.style.color = cheatTabCount > 2 ? '#ff5050' : 'var(--accent-yellow)';
+      addLog('⚠ Қойынды ауыстыру анықталды!', 'warn');
+      updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
+    }
+  });
+
+  document.addEventListener('copy', () => {
+    cheatPasteCount++;
+    document.getElementById('pasteCount').textContent = cheatPasteCount;
+    document.getElementById('pasteCount').style.color = 'var(--accent-yellow)';
+    addLog('⚠ Ctrl+C көшіру анықталды!', 'warn');
+    updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
+  });
+
+  document.addEventListener('paste', () => {
+    cheatPasteCount++;
+    document.getElementById('pasteCount').textContent = cheatPasteCount;
+    document.getElementById('pasteCount').style.color = '#ff5050';
+    addLog('🚨 Ctrl+V қою анықталды!', 'warn');
+    updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && ['c','v','x','a'].includes(e.key.toLowerCase())) {
+      e.preventDefault();
+      addLog('⚠ Ctrl+' + e.key.toUpperCase() + ' бұғатталды', 'warn');
+    }
+  });
+
+  // Алдау баллын жаңарту
+  function updateCheatScore(score) {
+    score = Math.min(100, score);
+    document.getElementById('cheatScore').textContent = score;
+    document.getElementById('cheatBar').style.width = score + '%';
+    const bar  = document.getElementById('cheatBar');
+    const desc = document.getElementById('cheatDesc');
+    const num  = document.getElementById('cheatScore');
+    if (score < 20) {
+      bar.className = 'progress-fill green'; num.style.color = 'var(--accent-green)';
+      desc.textContent = '✓ Төмен қауіп — мінез-құлық қалыпты'; desc.style.color = 'var(--accent-green)';
+    } else if (score < 50) {
+      bar.className = 'progress-fill blue'; num.style.color = 'var(--accent-yellow)';
+      desc.textContent = '⚠ Орташа қауіп — тексеру ұсынылады'; desc.style.color = 'var(--accent-yellow)';
+    } else {
+      bar.className = 'progress-fill red'; num.style.color = '#ff5050';
+      desc.textContent = '🚨 Жоғары қауіп — оқытушыға хабарлама жіберілді!'; desc.style.color = '#ff5050';
+    }
+  }
+
+  // Журналға жазу
+  function addLog(msg, type) {
+    const now = new Date();
+    const t = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    const list = document.getElementById('logList');
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `<span class="log-time">${t}</span><span class="${type === 'warn' ? 'log-warn' : 'log-ok'}">${type === 'warn' ? '⚠' : '✓'}</span><span>${msg}</span>`;
+    list.appendChild(item);
+    list.scrollTop = list.scrollHeight;
+    // Тек соңғы 6 жазбаны сақтаймыз
+    const items = list.querySelectorAll('.log-item');
+    if (items.length > 6) items[0].remove();
+  }
+
+  // ============================================================
+  // ТАЙМЕР
+  // ============================================================
+  let seconds = 4365;
+  const timerEl = document.getElementById('timer');
+  setInterval(() => {
+    seconds = Math.max(0, seconds - 1);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    timerEl.textContent = [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');
+    if (seconds < 600) timerEl.classList.add('warning');
+    if (seconds === 0) submitExam();
+  }, 1000);
+
+  // ============================================================
+  // СҰРАҚТАР ПРОГРЕСС-ЖОЛАҒЫ МЕН НАВИГАТОР
+  // ============================================================
+  const pb = document.getElementById('progressBar');
+  const qn = document.getElementById('qNav');
+  for (let i = 0; i < 25; i++) {
+    const d = document.createElement('div');
+    d.className = 'q-dot' + (i < 6 ? ' answered' : i === 6 ? ' current' : '');
+    pb.appendChild(d);
+    const b = document.createElement('div');
+    b.className = 'q-nav-btn' + (i < 6 ? ' answered' : i === 6 ? ' current' : '');
+    b.textContent = i + 1;
+    qn.appendChild(b);
+  }
+
+  function selectOption(el) {
+    document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function navigate(dir) {
+    let cur = parseInt(document.getElementById('curQ').textContent);
+    cur = Math.max(1, Math.min(25, cur + dir));
+    document.getElementById('curQ').textContent = cur;
+  }
+
+  function submitExam() {
+    if (confirm('Емтиханды тапсыруға сенімдісіз бе?')) {
+      if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+      if (faceDetectInterval) clearInterval(faceDetectInterval);
+      if (micAnimFrame) cancelAnimationFrame(micAnimFrame);
+      window.location.href = 'student-dashboard.html';
+    }
+  }
+
+  // Бет тоқтатылса камераны өшіру
+  window.addEventListener('beforeunload', () => {
+    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+  });
+
+  // ============================================================
+  // BACKEND + AI SERVICE БАЙЛАНЫСЫ
+  // ============================================================
+  let currentSessionId = null;
+  let aiFrameInterval  = null;
+  const canvas = document.createElement('canvas');
+
+  // URL-ден examId алу
+  function getExamId() {
+    return new URLSearchParams(window.location.search).get('examId');
+  }
+
+  // Емтиханды бастау — backend session жасау
+  async function initExamSession() {
+    const examId = getExamId();
+    if (!examId) return;   // demo режімі — examId жоқ
+
+    try {
+      const session = await SessionAPI.start(examId);
+      currentSessionId = session.id;
+      // Уақытты examId негізінде жаңарту
+      const exam = await ExamAPI.getById(examId);
+      if (exam) {
+        seconds = exam.durationMinutes * 60;
+        document.querySelector('.exam-title').textContent = exam.title;
+      }
+      addLog('Сессия басталды #' + currentSessionId, 'ok');
+    } catch (e) {
+      console.warn('Сессия бастау қатесі:', e.message);
+    }
+  }
+
+  // Видеодан frame → AI Service жіберу
+  async function sendFrameToAI() {
+    if (!currentSessionId) return;
+    const video = document.getElementById('realCamera');
+    if (!video || video.readyState < 2) return;
+
+    canvas.width  = 320;
+    canvas.height = 240;
+    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        const result = await AiAPI.analyzeFrame(currentSessionId, blob);
+        if (!result) return;
+
+        // Cheat score жаңарту
+        if (result.cheat_score !== undefined) {
+          updateCheatScore(result.cheat_score);
+        }
+
+        // Бет статусы
+        if (result.face_count === 0) {
+          document.getElementById('faceStatus').textContent = 'Бет табылмады ❌';
+          document.getElementById('faceStatus').className = 'cam-face-status bad';
+        } else if (result.face_count > 1) {
+          document.getElementById('faceStatus').textContent = 'Бірнеше адам! ⚠';
+          document.getElementById('faceStatus').className = 'cam-face-status bad';
+        } else {
+          document.getElementById('faceStatus').textContent = 'Бет анықталды ✓';
+          document.getElementById('faceStatus').className = 'cam-face-status good';
+        }
+
+        // Violation-дарды backend-ке жіберу
+        for (const v of (result.violations || [])) {
+          const weights = {
+            NO_FACE:40, MULTIPLE_FACES:60, MULTIPLE_PERSONS:50,
+            PERSON_ABSENT:40, GAZE_AWAY:20, HEAD_TURNED:25,
+            PHONE_DETECTED:70, BOOK_DETECTED:40
+          };
+          await SessionAPI.addViolation({
+            sessionId: currentSessionId,
+            type:      v,
+            score:     weights[v] || 10,
+            details:   JSON.stringify({ gaze: result.gaze_direction, yaw: result.head_yaw })
+          }).catch(() => {});
+
+          addLog('🚨 ' + violationLabel(v), 'warn');
+        }
+      } catch (e) {
+        console.warn('AI frame error:', e.message);
+      }
+    }, 'image/jpeg', 0.7);
+  }
+
+  function violationLabel(v) {
+    const map = {
+      NO_FACE:'Бет табылмады', MULTIPLE_FACES:'Бірнеше бет',
+      PERSON_ABSENT:'Адам жоқ', MULTIPLE_PERSONS:'Бірнеше адам',
+      GAZE_AWAY:'Басқа жаққа қарады', HEAD_TURNED:'Бас бұрылды',
+      PHONE_DETECTED:'Телефон анықталды!', BOOK_DETECTED:'Кітап анықталды!'
+    };
+    return map[v] || v;
+  }
+
+  // AI анализді камера іске қосылғанда бастау
+  const _origStartCamera = startCamera;
+  startCamera = async function() {
+    await _origStartCamera();
+    if (currentSessionId) {
+      aiFrameInterval = setInterval(sendFrameToAI, 3000); // әр 3 секунд сайын
+    }
+  };
+
+  // Емтиханды аяқтау — session finish
+  const _origSubmit = submitExam;
+  submitExam = async function() {
+    if (!confirm('Емтиханды тапсыруға сенімдісіз бе?')) return;
+    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+    if (faceDetectInterval) clearInterval(faceDetectInterval);
+    if (aiFrameInterval)    clearInterval(aiFrameInterval);
+    if (micAnimFrame)       cancelAnimationFrame(micAnimFrame);
+
+    if (currentSessionId) {
+      try { await SessionAPI.finish(currentSessionId); } catch (e) {}
+    }
+    window.location.href = 'student-dashboard.html';
+  };
+
+  // ============================================================
+  // ИНИЦИАЛИЗАЦИЯ
+  // ============================================================
+  const now = new Date();
+  const nowStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('t1').textContent = nowStr;
+  document.getElementById('t2').textContent = nowStr;
+
+  // Камера рұқсатын сұрайды
+  checkCameraAvailability();
+  </script>
+  <script>
+    Auth.check();
+    initExamSession();
+  </script>
+</body>
+</html>
