@@ -1,6 +1,12 @@
+# ══════════════════════════════════════════════════════════════
+#  ProctorAI — Full Docker Compose (all services)
+#  Usage:  docker-compose up -d --build
+#          docker-compose down
+# ══════════════════════════════════════════════════════════════
+
 services:
 
-  # ── Infrastructure ─────────────────────────────────────────
+  # ── PostgreSQL 17 ────────────────────────────────────────────
   postgres:
     image: postgres:17-alpine
     container_name: proktorai-postgres
@@ -23,6 +29,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Redis 7 ──────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: proktorai-redis
@@ -42,25 +49,26 @@ services:
       timeout: 3s
       retries: 5
 
+  # ── Apache Kafka (KRaft — without Zookeeper) ─────────────────
   kafka:
     image: apache/kafka:3.7.0
     container_name: proktorai-kafka
     restart: unless-stopped
-    ports:
-      - "9092:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_HEAP_OPTS: "-Xmx256m -Xms128m"
-    volumes:
-      - kafka_data:/var/lib/kafka/data
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9092:9092"
     deploy:
       resources:
         limits:
@@ -72,7 +80,7 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── Application Services ───────────────────────────────────
+  # ── Backend (Spring Boot 3.3, Java 21) ───────────────────────
   backend:
     build:
       context: ./backend
@@ -82,18 +90,29 @@ services:
     ports:
       - "9090:8080"
     environment:
+      # ── Database ──
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/proctoring_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: "1234"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      # ── Redis ──
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      # ── Kafka ──
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # ── JWT ──
       APP_JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      JAVA_OPTS: "-Xmx512m -Xms256m"
+      APP_JWT_EXPIRATION: 86400000
+      APP_JWT_REFRESH_EXPIRATION: 604800000
+      # ── Kafka Topics ──
+      APP_KAFKA_TOPICS_VIOLATION: proktorai.violations
+      APP_KAFKA_TOPICS_SESSION: proktorai.sessions
+      # ── JVM ──
+      JAVA_OPTS: "-Xmx384m -Xms128m"
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 512M
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,24 +122,12 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 60s
 
-  ai-service:
-    build:
-      context: ./ai-service
-      dockerfile: Dockerfile
-    container_name: proktorai-ai
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
+  # ── Analytics Service (Spring Boot, port 8082) ───────────────
   analytics-service:
     build:
       context: ./analytics-service
@@ -133,23 +140,46 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/proctoring_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: "1234"
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8082
+      JAVA_OPTS: "-Xmx256m -Xms128m"
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 384M
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 10
       start_period: 60s
 
+  # ── AI Service (Python FastAPI + MediaPipe + YOLOv8) ─────────
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: proktorai-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      NUMBA_DISABLE_JIT: 1
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ── Frontend (Nginx + static HTML/CSS/JS) ────────────────────
   frontend:
     build:
       context: ./proktorai-kz
@@ -159,10 +189,14 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
-      - ai-service
+      backend:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
 
+# ── Named volumes ──────────────────────────────────────────────
 volumes:
   postgres_data:
   redis_data:
-  kafka_data:

@@ -1721,7 +1721,13 @@
     // Store cleanup reference
     window._compositeCleanup = () => { _compositeRunning = false; };
     
-    return canvas.captureStream(20);
+    const stream = canvas.captureStream(20);
+    // Дыбысты (микрофон) композиттік видеоға қосамыз, себебі canvas тек визуалды жазады
+    if (camS.getAudioTracks().length > 0) {
+      stream.addTrack(camS.getAudioTracks()[0]);
+    }
+    
+    return stream;
   }
 
   function startExamAfterSetup() {

@@ -1,238 +1,173 @@
+"""
+Head pose estimation using solvePnP (MediaPipe landmarks) and YOLO-pose keypoints.
+Estimates pitch, yaw, roll angles and flags HEAD_TURNED violations.
+"""
+
+import cv2
 import numpy as np
-import math
 from dataclasses import dataclass
 
 
 @dataclass
 class HeadPoseResult:
-    pitch: float   # up / down  (+ = looking down, - = looking up)
-    yaw: float     # left / right (+ = looking right, - = looking left)
-    roll: float    # tilt
-    looking_away: bool
-    violation: str | None
+    pitch: float = 0.0
+    yaw: float = 0.0
+    roll: float = 0.0
+    looking_away: bool = False
+    violation: str | None = None
 
 
-# Thresholds — generous to avoid false positives
-_YAW_LIMIT   = 55.0    # degrees
-_PITCH_LIMIT = 50.0    # degrees
+# MediaPipe FaceMesh landmark indices for solvePnP
+# nose tip, chin, left eye outer, right eye outer, left mouth, right mouth
+_FACE_3D_MODEL = np.array([
+    [0.0, 0.0, 0.0],            # Nose tip
+    [0.0, -330.0, -65.0],       # Chin
+    [-225.0, 170.0, -135.0],    # Left eye outer corner
+    [225.0, 170.0, -135.0],     # Right eye outer corner
+    [-150.0, -150.0, -125.0],   # Left mouth corner
+    [150.0, -150.0, -125.0],    # Right mouth corner
+], dtype=np.float64)
 
-# Debounce: consecutive frame threshold
+_FACE_LM_INDICES = [1, 152, 33, 263, 61, 291]
+
+# Thresholds for head turn detection (degrees) — generous to reduce false positives
+_YAW_THRESHOLD   = 25.0    # left-right turn
+_PITCH_THRESHOLD = 25.0    # up-down tilt
+
+# Debounce: consecutive frames before flagging
 _HEAD_TURN_DEBOUNCE = 3
 
 
 class HeadPoseEstimator:
-    """
-    Head pose estimation using YOLO-pose keypoints.
-    
-    Uses nose, eyes, ears, and shoulders from YOLO pose model
-    to estimate head yaw, pitch, and roll.
-    
-    This is MORE ROBUST than MediaPipe solvePnP because:
-    - YOLO-pose handles occlusion better
-    - Works at wider angle ranges
-    - Keypoint confidence scores help filter noise
-    - Ear visibility is a strong indicator of head turn
-    """
+    """Estimates head orientation using MediaPipe landmarks or YOLO-pose keypoints."""
 
     def __init__(self):
-        self._turned_counter = 0
+        self._turn_counter = 0
 
-    def estimate_from_yolo_keypoints(self, keypoints: dict, image_shape: tuple = None) -> HeadPoseResult:
+    def estimate_from_landmarks(self, landmarks: list[list], image_shape: tuple) -> HeadPoseResult:
+        """
+        Estimate head pose using solvePnP from MediaPipe FaceMesh landmarks.
+
+        Args:
+            landmarks: list of [x, y, z] for 478 landmarks (pixel coords)
+            image_shape: (height, width, channels)
+
+        Returns:
+            HeadPoseResult with pitch, yaw, roll, and violation info
+        """
+        if not landmarks or len(landmarks) < 300:
+            return HeadPoseResult()
+
+        h, w = image_shape[:2]
+
+        try:
+            # Extract 2D points for solvePnP
+            image_points = np.array([
+                [landmarks[idx][0], landmarks[idx][1]]
+                for idx in _FACE_LM_INDICES
+            ], dtype=np.float64)
+
+            # Camera matrix approximation
+            focal_length = w
+            center = (w / 2, h / 2)
+            camera_matrix = np.array([
+                [focal_length, 0, center[0]],
+                [0, focal_length, center[1]],
+                [0, 0, 1],
+            ], dtype=np.float64)
+            dist_coeffs = np.zeros((4, 1))
+
+            success, rotation_vec, translation_vec = cv2.solvePnP(
+                _FACE_3D_MODEL, image_points, camera_matrix, dist_coeffs,
+                flags=cv2.SOLVEPNP_ITERATIVE,
+            )
+
+            if not success:
+                return HeadPoseResult()
+
+            # Convert rotation vector to Euler angles
+            rmat, _ = cv2.Rodrigues(rotation_vec)
+            angles, _, _, _, _, _ = cv2.RQDecomp3x3(rmat)
+
+            pitch = float(angles[0])
+            yaw = float(angles[1])
+            roll = float(angles[2])
+
+            return self._evaluate(pitch, yaw, roll)
+
+        except Exception:
+            return HeadPoseResult()
+
+    def estimate_from_yolo_keypoints(self, keypoints: list, image_shape: tuple) -> HeadPoseResult:
         """
         Estimate head pose from YOLO-pose keypoints.
-        
+
+        YOLO-pose provides 17 keypoints in COCO format:
+        0=nose, 1=left_eye, 2=right_eye, 3=left_ear, 4=right_ear, ...
+
         Args:
-            keypoints: dict with 'nose', 'left_eye', 'right_eye', 
-                       'left_ear', 'right_ear', 'left_shoulder', 'right_shoulder'
-                       Each has {x, y, conf, visible}
-        
+            keypoints: list of [x, y, conf] for 17 keypoints
+            image_shape: (height, width, channels)
+
         Returns:
-            HeadPoseResult with yaw, pitch, roll and violation
+            HeadPoseResult
         """
-        if not keypoints:
-            return HeadPoseResult(pitch=0, yaw=0, roll=0, looking_away=False, violation=None)
-        
-        nose = keypoints.get("nose", {})
-        l_eye = keypoints.get("left_eye", {})
-        r_eye = keypoints.get("right_eye", {})
-        l_ear = keypoints.get("left_ear", {})
-        r_ear = keypoints.get("right_ear", {})
-        l_shoulder = keypoints.get("left_shoulder", {})
-        r_shoulder = keypoints.get("right_shoulder", {})
-        
-        # Need at least nose + one eye to estimate anything
-        if not nose.get("visible") or not (l_eye.get("visible") or r_eye.get("visible")):
-            return HeadPoseResult(pitch=0, yaw=0, roll=0, looking_away=False, violation=None)
-        
-        # ── YAW estimation (left/right head turn) ────────────────
-        yaw = self._estimate_yaw(nose, l_eye, r_eye, l_ear, r_ear)
-        
-        # ── PITCH estimation (up/down) ───────────────────────────
-        pitch = self._estimate_pitch(nose, l_eye, r_eye, l_shoulder, r_shoulder)
-        
-        # ── ROLL estimation (head tilt) ──────────────────────────
-        roll = self._estimate_roll(l_eye, r_eye, l_shoulder, r_shoulder)
-        
-        # ── Determine if looking away ────────────────────────────
-        is_turned = abs(yaw) > _YAW_LIMIT or abs(pitch) > _PITCH_LIMIT
-        
-        if is_turned:
-            self._turned_counter += 1
+        if not keypoints or len(keypoints) < 5:
+            return HeadPoseResult()
+
+        try:
+            nose      = keypoints[0][:2]
+            left_eye  = keypoints[1][:2]
+            right_eye = keypoints[2][:2]
+            left_ear  = keypoints[3][:2]
+            right_ear = keypoints[4][:2]
+
+            # Estimate yaw from ear-to-nose ratios
+            eye_center_x = (left_eye[0] + right_eye[0]) / 2
+            eye_dist = abs(right_eye[0] - left_eye[0]) + 1e-6
+
+            # Nose displacement from eye center → yaw
+            nose_offset = (nose[0] - eye_center_x) / eye_dist
+            yaw = float(nose_offset * 45)   # rough mapping
+
+            # Ear visibility → additional yaw cue
+            l_ear_conf = keypoints[3][2] if len(keypoints[3]) > 2 else 0.5
+            r_ear_conf = keypoints[4][2] if len(keypoints[4]) > 2 else 0.5
+            if l_ear_conf < 0.3 and r_ear_conf > 0.5:
+                yaw = max(yaw, 20)   # facing right
+            elif r_ear_conf < 0.3 and l_ear_conf > 0.5:
+                yaw = min(yaw, -20)  # facing left
+
+            # Pitch from nose-to-eye vertical ratio
+            eye_center_y = (left_eye[1] + right_eye[1]) / 2
+            eye_height = abs(right_eye[1] - left_eye[1]) + 1e-6
+            nose_v_offset = (nose[1] - eye_center_y) / (eye_dist + 1e-6)
+            pitch = float((nose_v_offset - 0.5) * 40)
+
+            roll = 0.0  # hard to estimate from YOLO keypoints
+
+            return self._evaluate(pitch, yaw, roll)
+
+        except Exception:
+            return HeadPoseResult()
+
+    def _evaluate(self, pitch: float, yaw: float, roll: float) -> HeadPoseResult:
+        """Evaluate angles and determine if head is turned beyond thresholds."""
+        turned = abs(yaw) > _YAW_THRESHOLD or abs(pitch) > _PITCH_THRESHOLD
+
+        if turned:
+            self._turn_counter += 1
         else:
-            self._turned_counter = 0
-        
-        actually_turned = is_turned and self._turned_counter >= _HEAD_TURN_DEBOUNCE
-        violation = "HEAD_TURNED" if actually_turned else None
-        
+            self._turn_counter = 0
+
+        # Only flag after debounce
+        flagged = turned and self._turn_counter >= _HEAD_TURN_DEBOUNCE
+        violation = "HEAD_TURNED" if flagged else None
+
         return HeadPoseResult(
             pitch=round(pitch, 1),
             yaw=round(yaw, 1),
             roll=round(roll, 1),
-            looking_away=actually_turned,
-            violation=violation
+            looking_away=flagged,
+            violation=violation,
         )
-    
-    def _estimate_yaw(self, nose, l_eye, r_eye, l_ear, r_ear) -> float:
-        """
-        Estimate yaw angle using multiple cues:
-        1. Nose position relative to eye midpoint
-        2. Ear visibility asymmetry (strong cue!)
-        """
-        yaw = 0.0
-        
-        # Method 1: Nose offset from eye midpoint
-        if l_eye.get("visible") and r_eye.get("visible"):
-            eye_mid_x = (l_eye["x"] + r_eye["x"]) / 2
-            eye_dist = abs(r_eye["x"] - l_eye["x"]) + 1e-6
-            nose_offset = (nose["x"] - eye_mid_x) / eye_dist
-            yaw = nose_offset * 60  # Approximate degrees
-        elif l_eye.get("visible"):
-            # Only left eye visible → head is turned right
-            yaw = 30
-        elif r_eye.get("visible"):
-            # Only right eye visible → head is turned left
-            yaw = -30
-        
-        # Method 2: Ear visibility (very reliable indicator)
-        l_ear_vis = l_ear.get("visible", False)
-        r_ear_vis = r_ear.get("visible", False)
-        
-        if l_ear_vis and not r_ear_vis:
-            # Left ear visible, right ear hidden → head turned RIGHT
-            yaw = max(yaw, 40)
-        elif r_ear_vis and not l_ear_vis:
-            # Right ear visible, left ear hidden → head turned LEFT
-            yaw = min(yaw, -40)
-        elif l_ear_vis and r_ear_vis:
-            # Both ears visible → facing roughly forward
-            # Use ear-to-nose distance ratio for fine-tuning
-            l_ear_dist = abs(nose["x"] - l_ear["x"])
-            r_ear_dist = abs(nose["x"] - r_ear["x"])
-            total = l_ear_dist + r_ear_dist + 1e-6
-            ratio = (r_ear_dist - l_ear_dist) / total
-            ear_yaw = ratio * 50
-            # Blend with eye-based yaw
-            yaw = (yaw + ear_yaw) / 2
-        
-        return yaw
-    
-    def _estimate_pitch(self, nose, l_eye, r_eye, l_shoulder, r_shoulder) -> float:
-        """Estimate pitch angle from vertical positions of keypoints."""
-        pitch = 0.0
-        
-        # Use nose position relative to eyes
-        eye_y = 0
-        eye_count = 0
-        if l_eye.get("visible"):
-            eye_y += l_eye["y"]
-            eye_count += 1
-        if r_eye.get("visible"):
-            eye_y += r_eye["y"]
-            eye_count += 1
-        
-        if eye_count == 0:
-            return 0.0
-        
-        eye_y /= eye_count
-        
-        # Nose-to-eye vertical ratio
-        # In a neutral pose, nose is below eyes by ~35% of face height
-        # Estimate face height from eye-shoulder distance or eye spacing
-        if l_shoulder.get("visible") and r_shoulder.get("visible"):
-            shoulder_y = (l_shoulder["y"] + r_shoulder["y"]) / 2
-            face_ref = abs(shoulder_y - eye_y) + 1e-6
-        else:
-            # Fall back to inter-eye distance as reference
-            if l_eye.get("visible") and r_eye.get("visible"):
-                face_ref = abs(r_eye["x"] - l_eye["x"]) * 1.5 + 1e-6
-            else:
-                return 0.0
-        
-        nose_ratio = (nose["y"] - eye_y) / face_ref
-        # Normal ratio is ~0.15-0.25. Deviation indicates pitch
-        pitch = (nose_ratio - 0.20) * 150  # Scale to approximate degrees
-        
-        return max(-80, min(80, pitch))
-    
-    def _estimate_roll(self, l_eye, r_eye, l_shoulder, r_shoulder) -> float:
-        """Estimate roll angle from eye/shoulder line tilt."""
-        if l_eye.get("visible") and r_eye.get("visible"):
-            dy = r_eye["y"] - l_eye["y"]
-            dx = r_eye["x"] - l_eye["x"] + 1e-6
-            return math.degrees(math.atan2(dy, dx))
-        
-        if l_shoulder.get("visible") and r_shoulder.get("visible"):
-            dy = r_shoulder["y"] - l_shoulder["y"]
-            dx = r_shoulder["x"] - l_shoulder["x"] + 1e-6
-            return math.degrees(math.atan2(dy, dx))
-        
-        return 0.0
-    
-    # ── Legacy interface (MediaPipe fallback) ────────────────────
-    def estimate_from_landmarks(self, landmarks: list[list], image_shape: tuple) -> HeadPoseResult:
-        """Fallback: estimate from MediaPipe FaceMesh landmarks."""
-        if not landmarks or len(landmarks) < 468:
-            return HeadPoseResult(pitch=0, yaw=0, roll=0, looking_away=False, violation=None)
-        
-        try:
-            # Use nose tip (1) vs face center
-            nose = landmarks[1]
-            l_cheek = landmarks[234]
-            r_cheek = landmarks[454]
-            chin = landmarks[152]
-            l_eye_lm = landmarks[33]
-            r_eye_lm = landmarks[263]
-            
-            face_cx = (l_cheek[0] + r_cheek[0]) / 2
-            face_w = abs(r_cheek[0] - l_cheek[0]) + 1e-6
-            
-            yaw = ((nose[0] - face_cx) / face_w) * 60
-            
-            eye_mid_y = (l_eye_lm[1] + r_eye_lm[1]) / 2
-            face_h = abs(chin[1] - eye_mid_y) + 1e-6
-            pitch = ((nose[1] - eye_mid_y) / face_h - 0.35) * 80
-            
-            dy = r_eye_lm[1] - l_eye_lm[1]
-            dx = r_eye_lm[0] - l_eye_lm[0] + 1e-6
-            roll = math.degrees(math.atan2(dy, dx))
-            
-            is_turned = abs(yaw) > _YAW_LIMIT or abs(pitch) > _PITCH_LIMIT
-            
-            if is_turned:
-                self._turned_counter += 1
-            else:
-                self._turned_counter = 0
-            
-            actually_turned = is_turned and self._turned_counter >= _HEAD_TURN_DEBOUNCE
-            violation = "HEAD_TURNED" if actually_turned else None
-            
-            return HeadPoseResult(
-                pitch=round(pitch, 1), yaw=round(yaw, 1), roll=round(roll, 1),
-                looking_away=actually_turned, violation=violation
-            )
-        except (IndexError, TypeError):
-            return HeadPoseResult(pitch=0, yaw=0, roll=0, looking_away=False, violation=None)
-    
-    def estimate(self, image: np.ndarray) -> HeadPoseResult:
-        """Legacy interface."""
-        return HeadPoseResult(pitch=0, yaw=0, roll=0, looking_away=False, violation=None)

@@ -39,6 +39,17 @@ public class Exam {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private StudentGroup targetGroup;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer totalQuestions = 0;
+
+    @Column
+    private Integer passingScore;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -1,4 +1,4 @@
-// Theme initializer — runs before paint to prevent flash
+  // Theme initializer — runs before paint to prevent flash
 (function () {
   const saved = localStorage.getItem('proktorai-theme');
   if (saved === 'light') {

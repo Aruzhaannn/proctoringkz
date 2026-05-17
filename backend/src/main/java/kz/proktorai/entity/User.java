@@ -42,6 +42,10 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean enabled = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private StudentGroup studentGroup;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
