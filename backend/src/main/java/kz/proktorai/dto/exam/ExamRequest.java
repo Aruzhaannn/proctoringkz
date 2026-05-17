@@ -21,4 +21,12 @@ public class ExamRequest {
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+
+    private Long groupId;
+
+    @NotNull
+    @Min(1)
+    private Integer totalQuestions;
+
+    private Integer passingScore;
 }

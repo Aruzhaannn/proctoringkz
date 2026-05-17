@@ -20,4 +20,5 @@ public class SessionResponse {
     private Integer cheatScore;
     private Boolean phoneUnlocked;
     private List<ViolationResponse> violations;
+    private List<SessionQuestionResponse> questions;
 }

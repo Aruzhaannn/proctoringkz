@@ -26,6 +26,8 @@ public class ExamSessionService {
     private final ExamService examService;
     private final ViolationProducer violationProducer;
     private final SessionProducer sessionProducer;
+    private final kz.proktorai.repository.QuestionRepository questionRepository;
+    private final kz.proktorai.repository.SessionQuestionRepository sessionQuestionRepository;
 
     @Transactional
     public SessionResponse startSession(Long examId, User student) {
@@ -38,6 +40,21 @@ public class ExamSessionService {
                 .student(student)
                 .build();
         var saved = sessionRepository.save(session);
+
+        // Assign random questions
+        if (exam.getTotalQuestions() != null && exam.getTotalQuestions() > 0) {
+            List<kz.proktorai.entity.Question> allQuestions = questionRepository.findByExamId(exam.getId());
+            java.util.Collections.shuffle(allQuestions);
+            int count = Math.min(exam.getTotalQuestions(), allQuestions.size());
+            List<kz.proktorai.entity.SessionQuestion> assignedQuestions = new java.util.ArrayList<>();
+            for (int i = 0; i < count; i++) {
+                assignedQuestions.add(kz.proktorai.entity.SessionQuestion.builder()
+                        .session(saved)
+                        .question(allQuestions.get(i))
+                        .build());
+            }
+            sessionQuestionRepository.saveAll(assignedQuestions);
+        }
 
         sessionProducer.send(SessionEvent.builder()
                 .sessionId(saved.getId())
@@ -54,12 +71,28 @@ public class ExamSessionService {
     }
 
     @Transactional
-    public SessionResponse finishSession(Long sessionId, User student) {
+    public SessionResponse finishSession(Long sessionId, kz.proktorai.dto.exam.SubmitAnswersRequest request, User student) {
         var session = getSessionForStudent(sessionId, student);
         session.setStatus(SessionStatus.COMPLETED);
         session.setEndTime(LocalDateTime.now());
-        var saved = sessionRepository.save(session);
 
+        if (request != null && request.getAnswers() != null) {
+            List<kz.proktorai.entity.SessionQuestion> questions = sessionQuestionRepository.findBySessionId(sessionId);
+            for (kz.proktorai.entity.SessionQuestion sq : questions) {
+                String ans = request.getAnswers().get(sq.getId());
+                if (ans != null) {
+                    sq.setStudentAnswer(ans);
+                    // check if correct
+                    boolean isCorrect = sq.getQuestion().getOptions().stream()
+                            .anyMatch(o -> o.getIsCorrect() && o.getOptionText().equalsIgnoreCase(ans));
+                    sq.setIsCorrect(isCorrect);
+                    sq.setScoreEarned(isCorrect ? sq.getQuestion().getPoints() : 0);
+                }
+            }
+            sessionQuestionRepository.saveAll(questions);
+        }
+
+        var saved = sessionRepository.save(session);
         sessionProducer.send(buildSessionEvent(saved));
         return toResponse(saved);
     }
@@ -151,6 +184,22 @@ public class ExamSessionService {
     }
 
     private SessionResponse toResponse(ExamSession s) {
+        List<kz.proktorai.entity.SessionQuestion> sqs = sessionQuestionRepository.findBySessionId(s.getId());
+        List<kz.proktorai.dto.exam.SessionQuestionResponse> qs = sqs.stream().map(sq -> 
+            kz.proktorai.dto.exam.SessionQuestionResponse.builder()
+                .id(sq.getId())
+                .questionId(sq.getQuestion().getId())
+                .text(sq.getQuestion().getQuestionText())
+                .options(sq.getQuestion().getOptions().stream().map(opt ->
+                    kz.proktorai.dto.exam.SessionQuestionResponse.OptionResponse.builder()
+                        .id(opt.getId())
+                        .text(opt.getOptionText())
+                        .build()
+                ).toList())
+                .studentAnswer(sq.getStudentAnswer())
+                .build()
+        ).toList();
+
         return SessionResponse.builder()
                 .id(s.getId())
                 .examId(s.getExam().getId())
@@ -162,6 +211,7 @@ public class ExamSessionService {
                 .cheatScore(s.getCheatScore())
                 .phoneUnlocked(s.getPhoneUnlocked())
                 .violations(s.getViolations().stream().map(this::toViolationResponse).toList())
+                .questions(qs)
                 .build();
     }
 

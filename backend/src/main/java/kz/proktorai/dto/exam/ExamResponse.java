@@ -23,4 +23,9 @@ public class ExamResponse implements Serializable {
     private ExamStatus status;
     private String createdByName;
     private LocalDateTime createdAt;
+    
+    private Long groupId;
+    private String groupName;
+    private Integer totalQuestions;
+    private Integer passingScore;
 }

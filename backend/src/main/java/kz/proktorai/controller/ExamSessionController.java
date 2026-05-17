@@ -35,8 +35,9 @@ public class ExamSessionController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<SessionResponse> finish(
             @PathVariable Long id,
+            @RequestBody(required = false) kz.proktorai.dto.exam.SubmitAnswersRequest request,
             @AuthenticationPrincipal User student) {
-        return ResponseEntity.ok(sessionService.finishSession(id, student));
+        return ResponseEntity.ok(sessionService.finishSession(id, request, student));
     }
 
     // Teacher/Admin — сессияны мәжбүрлі тоқтату

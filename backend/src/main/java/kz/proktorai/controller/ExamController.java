@@ -20,13 +20,23 @@ public class ExamController {
 
     private final ExamService examService;
 
-    // Teacher/Admin — емтихан жасау
+    // Teacher/Admin — емтихан жасау (тек деректер)
     @PostMapping
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
     public ResponseEntity<ExamResponse> create(
             @Valid @RequestBody ExamRequest request,
             @AuthenticationPrincipal User teacher) {
-        return ResponseEntity.ok(examService.create(request, teacher));
+        return ResponseEntity.ok(examService.create(request, null, teacher));
+    }
+
+    // Teacher/Admin — емтихан жасау (файлмен бірге)
+    @PostMapping(value = "/with-file", consumes = {"multipart/form-data"})
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
+    public ResponseEntity<ExamResponse> createWithFile(
+            @Valid @ModelAttribute ExamRequest request,
+            @RequestPart(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
+            @AuthenticationPrincipal User teacher) {
+        return ResponseEntity.ok(examService.create(request, file, teacher));
     }
 
     // Teacher/Admin — белсендіру

@@ -18,9 +18,18 @@ import java.util.List;
 public class ExamService {
 
     private final ExamRepository examRepository;
+    private final kz.proktorai.repository.StudentGroupRepository groupRepository;
+    private final kz.proktorai.repository.QuestionRepository questionRepository;
+    private final WordParserService wordParserService;
 
     @CacheEvict(value = "exams", allEntries = true)
-    public ExamResponse create(ExamRequest request, User teacher) {
+    public ExamResponse create(ExamRequest request, org.springframework.web.multipart.MultipartFile file, User teacher) {
+        kz.proktorai.entity.StudentGroup group = null;
+        if (request.getGroupId() != null) {
+            group = groupRepository.findById(request.getGroupId())
+                    .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+        }
+
         var exam = Exam.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -28,8 +37,22 @@ public class ExamService {
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .createdBy(teacher)
+                .targetGroup(group)
+                .totalQuestions(request.getTotalQuestions() != null ? request.getTotalQuestions() : 0)
+                .passingScore(request.getPassingScore())
                 .build();
-        return toResponse(examRepository.save(exam));
+        
+        exam = examRepository.save(exam);
+
+        if (file != null && !file.isEmpty()) {
+            List<kz.proktorai.entity.Question> questions = wordParserService.parseQuestions(file);
+            for (kz.proktorai.entity.Question q : questions) {
+                q.setExam(exam);
+            }
+            questionRepository.saveAll(questions);
+        }
+
+        return toResponse(exam);
     }
 
     @CacheEvict(value = "exams", allEntries = true)
@@ -89,6 +112,10 @@ public class ExamService {
                 .status(e.getStatus())
                 .createdByName(e.getCreatedBy().getFullName())
                 .createdAt(e.getCreatedAt())
+                .groupId(e.getTargetGroup() != null ? e.getTargetGroup().getId() : null)
+                .groupName(e.getTargetGroup() != null ? e.getTargetGroup().getName() : null)
+                .totalQuestions(e.getTotalQuestions())
+                .passingScore(e.getPassingScore())
                 .build();
     }
 }
