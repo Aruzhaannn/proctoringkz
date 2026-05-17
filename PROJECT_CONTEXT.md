@@ -1,5 +1,5 @@
 # ProctorAI — Полный Контекст Проекта
-> **Последнее обновление:** 2026-05-17  
+> **Последнее обновление:** 2026-05-18  
 > **Автор проекта:** Қожахметова Аружан  
 > **Назначение файла:** Этот файл содержит **полное описание проекта** для AI-агентов. Прочитайте его ВМЕСТО повторного анализа всех файлов.
 
@@ -44,6 +44,9 @@
 ```
 proctoringkz/
 ├── docker-compose.yml            # Оркестрация: postgres, redis, kafka, backend, ai-service, frontend
+├── docker-compose.simple.yml     # Упрощённый (без Kafka, Analytics)
+├── start-dev.bat                 # Сборка и запуск всех контейнеров (Windows)
+├── stop-dev.bat                  # Остановка контейнеров
 ├── PROJECT_CONTEXT.md            # ← ЭТОТ ФАЙЛ
 │
 ├── backend/                      # Java Spring Boot 3.3.0, Java 21
@@ -107,9 +110,9 @@ proctoringkz/
 │               ├── SessionProducer.java     # Отправка SessionEvent
 │               └── SessionConsumer.java     # Получение SessionEvent
 │
-├── ai-service/                   # Python FastAPI + YOLOv8 + OpenCV
+├── ai-service/                   # Python FastAPI + MediaPipe + YOLOv8
 │   ├── Dockerfile                # python:3.12-slim
-│   ├── requirements.txt          # fastapi, uvicorn, opencv, ultralytics(YOLOv8), librosa, scipy
+│   ├── requirements.txt          # fastapi, uvicorn, opencv, mediapipe, ultralytics(YOLOv8), librosa
 │   ├── yolov8n.pt                # Предобученная модель YOLOv8 nano
 │   ├── face_detection_test.py
 │   └── app/
@@ -119,10 +122,10 @@ proctoringkz/
 │       ├── routers/
 │       │   └── analyze.py        # POST /api/v1/analyze (frame), POST /api/v1/analyze/audio
 │       └── services/
-│           ├── face_detector.py       # MediaPipe Face Detection
-│           ├── gaze_analyzer.py       # Анализ направления взгляда
-│           ├── head_pose_estimator.py # Оценка поворота головы (pitch/yaw/roll)
-│           ├── object_detector.py     # YOLOv8 (телефон, книга и т.д.)
+│           ├── face_detector.py       # MediaPipe Face Detection + FaceMesh (478 landmarks, max 5 faces)
+│           ├── gaze_analyzer.py       # Iris-based gaze (landmarks 468-477: left/right/up/down/diagonal)
+│           ├── head_pose_estimator.py # solvePnP head pose from FaceMesh (pitch/yaw/roll, порог 20°)
+│           ├── object_detector.py     # YOLOv8 (conf=0.25, classes: cell phone, remote, book, laptop)
 │           └── audio_detector.py      # Анализ аудио (librosa, VAD)
 │
 ├── proktorai-kz/                 # Фронтенд — статический HTML/CSS/JS
@@ -302,15 +305,18 @@ AiAPI    — analyzeFrame(sessionId, blob, counters), analyzeAudio(sessionId, bl
 
 Ключевые возможности:
 - **WebRTC камера** — getUserMedia (видео + аудио)
-- **Face detection** — рамка вокруг лица (симуляция, TensorFlow.js по желанию)
+- **AI Face Detection** — MediaPipe через AI-service, рамка зелёная/красная по статусу
 - **Микрофон мониторинг** — AudioContext + AnalyserNode визуализация
 - **Мониторинг нарушений:**
   - Переключение вкладок (visibilitychange)
   - Ctrl+C / Ctrl+V (keydown)
   - Сворачивание окна (blur/focus)
-  - Отсутствие лица (face detection)
+  - Отсутствие лица / несколько лиц (AI)
+  - Телефон, книга (YOLOv8)
+  - Направление взгляда (iris-based)
+  - Поворот головы (solvePnP)
 - **3-strike система:** 3 предупреждения → автоматическая терминация экзамена
-- **AI-анализ кадров:** Каждые 10 сек отправка кадра на AI-service
+- **AI-анализ кадров:** Каждые 3 сек отправка кадра 640×480 на AI-service (работает и без backend session)
 - **Таймер обратного отсчёта**
 
 ### Типы нарушений (WARNING_RULES)
@@ -331,12 +337,13 @@ MULTIPLE_VOICES, VOICE_DETECTED
 - Кнопка "Начать экзамен"
 
 ### Teacher Dashboard
-- Живой мониторинг студентов (карточки с камерами)
+- Живой мониторинг студентов (карточки — **только реальные данные из API**, без демо-данных)
 - Создание/активация/завершение экзаменов
 - Лента оповещений о нарушениях в реальном времени
 - Рейтинг по cheat score
 - Фильтрация по уровню риска (low/mid/high)
 - Принудительная терминация сессии студента
+- Динамическая таблица студентов (заполняется из сессий)
 
 ### Admin Dashboard
 - Статистика: пользователи, экзамены, AI детекции, SLA
@@ -352,7 +359,7 @@ MULTIPLE_VOICES, VOICE_DETECTED
 |-------------|-----------|
 | Frontend     | HTML5, CSS3, Vanilla JS, Google Fonts (Syne + DM Sans) |
 | Backend      | Java 21, Spring Boot 3.3.0, Spring Security, Spring Data JPA, Spring Kafka |
-| AI Service   | Python 3.12, FastAPI, OpenCV, YOLOv8 (ultralytics), MediaPipe, librosa |
+| AI Service   | Python 3.12, FastAPI, OpenCV, **MediaPipe** (Face Detection + FaceMesh 478 lm + iris), **YOLOv8** (ultralytics, conf=0.25), librosa |
 | Database     | PostgreSQL 17 (Alpine) |
 | Cache        | Redis 7 (Alpine) |
 | Messaging    | Apache Kafka 3.7.0 |
@@ -366,7 +373,14 @@ MULTIPLE_VOICES, VOICE_DETECTED
 
 ## 12. Запуск проекта
 
-### Вариант A: Docker Compose (полный стек)
+### Вариант A: BAT-файл (Windows, рекомендуется)
+```bash
+# Двойной клик на start-dev.bat
+# Автоматически: проверка Docker → остановка старых → сборка → запуск → healthcheck → открытие браузера
+# Остановка: stop-dev.bat
+```
+
+### Вариант B: Docker Compose (ручной)
 ```bash
 docker-compose up -d --build
 # Frontend: http://localhost:80
@@ -374,7 +388,7 @@ docker-compose up -d --build
 # AI:       http://localhost:8000
 ```
 
-### Вариант B: Локальная разработка
+### Вариант C: Локальная разработка
 ```bash
 # 1. PostgreSQL (Docker или локальный, порт 5432, БД: proctoring_db, user: postgres, pass: 1234)
 # 2. Backend:
@@ -384,6 +398,9 @@ cd ai-service && pip install -r requirements.txt && uvicorn app.main:app --port 
 # 4. Frontend: просто открыть proktorai-kz/index.html в браузере (file:// или Live Server :5500)
 ```
 
+### БД создаётся автоматически
+PostgreSQL контейнер создаёт БД `proctoring_db` через `POSTGRES_DB`. Spring Boot создаёт таблицы через JPA `ddl-auto: update`. `DataInitializer` создаёт 3 демо-аккаунта.
+
 ### CORS (для локальной разработки)
 Разрешены origins: `localhost:3000`, `localhost:8080`, `127.0.0.1:5500`, `localhost:5500`, `127.0.0.1:5173`, `localhost:5173`, `null`
 
@@ -391,12 +408,13 @@ cd ai-service && pip install -r requirements.txt && uvicorn app.main:app --port 
 
 ## 13. Известные проблемы и заметки
 
-1. **Lombok + Java 21 (JDK 26):** Если JDK слишком новый, Lombok может не компилироваться (`TypeTag :: UNKNOWN`). Решение — использовать Docker (eclipse-temurin:21) для сборки или использовать совместимую версию JDK.
-2. **Docker Desktop** должен быть запущен для `docker-compose`.
+1. **Lombok + Java 21 (JDK 26):** Если JDK слишком новый, Lombok может не компилироваться (`TypeTag :: UNKNOWN`). Решение — использовать Docker (eclipse-temurin:21) для сборки.
+2. **Docker Desktop** должен быть запущен для `docker-compose`. Используйте `start-dev.bat`.
 3. **Kafka** может долго стартовать (30+ секунд); healthcheck настроен с `start_period: 30s`.
-4. **AI Service** загружает модель YOLOv8 при первом запуске — может быть задержка.
+4. **AI Service** загружает MediaPipe модели (~30 МБ) и YOLOv8 при первом запуске — задержка 30-60 сек.
 5. **Frontend** работает как статические файлы (file://) для локальной разработки — api.js авто-определяет среду.
 6. **Данные финансов** в admin-dashboard пока статические (hardcoded HTML), не связаны с бэкендом API.
+7. **AI детекция работает без backend** — если нет sessionId, используется fallback `demo`.
 
 ---
 

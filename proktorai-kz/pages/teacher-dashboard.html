@@ -578,24 +578,24 @@
           <td style="color:var(--text-muted)">${s.violations?.length || 0}</td>
           <td><button class="btn btn-ghost" style="font-size:0.72rem;padding:5px 10px;" onclick="terminateSession(${s.id})">⛔ Тоқтату</button></td>
         </tr>`;
-      }).join('');\r
-\r
-      // Populate students tab with real session data\r
-      const studentBody = document.getElementById('studentListBody');\r
-      if (studentBody) {\r
-        studentBody.innerHTML = list.length ? list.map(s => {\r
-          const risk = riskLevel(s.cheatScore);\r
-          const color = risk==='high'?'#ff5050':risk==='mid'?'var(--accent-yellow)':'var(--accent-green)';\r
-          const statusLabel = s.status === 'IN_PROGRESS' ? '<span class="badge badge-green">Белсенді</span>' : s.status === 'COMPLETED' ? '<span class="badge badge-blue">Аяқталды</span>' : '<span class="badge badge-red">Тоқтатылды</span>';\r
-          return `<tr>\r
-            <td><strong>${s.studentName}</strong></td>\r
-            <td style="font-size:0.82rem;color:var(--text-muted);">${s.examTitle || '-'}</td>\r
-            <td>${s.violations?.length || 0}</td>\r
-            <td style="color:${color};font-weight:700;">${s.cheatScore}%</td>\r
-            <td>${statusLabel}</td>\r
-          </tr>`;\r
-        }).join('') : '<tr><td colspan="5" style="color:var(--text-muted);padding:16px;text-align:center;">Белсенді сессия жоқ</td></tr>';\r
-      }\r
+      }).join('');
+
+      // Populate students tab with real session data
+      const studentBody = document.getElementById('studentListBody');
+      if (studentBody) {
+        studentBody.innerHTML = list.length ? list.map(s => {
+          const risk = riskLevel(s.cheatScore);
+          const color = risk==='high'?'#ff5050':risk==='mid'?'var(--accent-yellow)':'var(--accent-green)';
+          const statusLabel = s.status === 'IN_PROGRESS' ? '<span class="badge badge-green">Белсенді</span>' : s.status === 'COMPLETED' ? '<span class="badge badge-blue">Аяқталды</span>' : '<span class="badge badge-red">Тоқтатылды</span>';
+          return `<tr>
+            <td><strong>${s.studentName}</strong></td>
+            <td style="font-size:0.82rem;color:var(--text-muted);">${s.examTitle || '-'}</td>
+            <td>${s.violations?.length || 0}</td>
+            <td style="color:${color};font-weight:700;">${s.cheatScore}%</td>
+            <td>${statusLabel}</td>
+          </tr>`;
+        }).join('') : '<tr><td colspan="5" style="color:var(--text-muted);padding:16px;text-align:center;">Белсенді сессия жоқ</td></tr>';
+      }
     }
 
     async function terminateSession(id) {

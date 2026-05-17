@@ -2185,9 +2185,25 @@
       if (!blob) return;
       try {
         const result = await AiAPI.analyzeFrame(sessionId, blob);
-        if (!result) return;
+        if (!result) {
+          console.warn('[ProctorAI] AI returned null — service may be down');
+          return;
+        }
 
-        // ── Бет статусы + persistent no-face lock ────────────
+        // ── Diagnostic logging ────────────────────────────────
+        console.log('[ProctorAI] AI Result:', {
+          faces: result.face_count,
+          gaze: result.gaze_direction,
+          head_yaw: result.head_yaw,
+          head_pitch: result.head_pitch,
+          persons: result.persons_detected,
+          objects: result.detected_objects,
+          violations: result.violations,
+          score: result.cheat_score,
+          risk: result.risk_level
+        });
+
+        // ── Face status + persistent no-face lock ─────────────
         const nofaceOverlay = document.getElementById('nofaceOverlay');
         if (result.face_count === 0) {
           document.getElementById('faceStatus').textContent = 'Бет табылмады ❌';
@@ -2215,10 +2231,13 @@
           stopNofaceCountdown();
         }
 
-        // ── Көз бақылауы ─────────────────────────────────────
+        // ── Gaze tracking ─────────────────────────────────────
+        const gazeDir = result.gaze_direction || 'unknown';
         const isGazeAway = (result.violations || []).includes('GAZE_AWAY') ||
-                           (result.gaze_direction && result.gaze_direction !== 'center' && result.gaze_direction !== 'forward');
+                           (result.looking_away === true) ||
+                           (gazeDir !== 'center' && gazeDir !== 'forward' && gazeDir !== 'unknown');
         if (isGazeAway) {
+          console.log('[ProctorAI] GAZE AWAY detected:', gazeDir);
           startGazeTimer();
           cheatEngine.updateGazeStability(false);
         } else {
@@ -2226,6 +2245,12 @@
           cheatEngine.updateGazeStability(true);
         }
 
+        // ── Head pose tracking ────────────────────────────────
+        if (result.head_turned) {
+          console.log('[ProctorAI] HEAD TURNED: yaw=' + result.head_yaw + ', pitch=' + result.head_pitch);
+        }
+
+        // ── Process violations ────────────────────────────────
         const weights = { NO_FACE:40, MULTIPLE_FACES:60, MULTIPLE_PERSONS:50, PERSON_ABSENT:40, GAZE_AWAY:20, HEAD_TURNED:25, PHONE_DETECTED:70, BOOK_DETECTED:40 };
         for (const v of (result.violations || [])) {
           // Only send violations to backend if we have a real session
@@ -2234,17 +2259,18 @@
               sessionId: currentSessionId,
               type:      v,
               score:     weights[v] || 10,
-              details:   JSON.stringify({ gaze: result.gaze_direction, yaw: result.head_yaw })
+              details:   JSON.stringify({ gaze: result.gaze_direction, yaw: result.head_yaw, pitch: result.head_pitch })
             }).catch(() => {});
           }
           addLog('🤖 AI: ' + violationLabel(v), 'warn');
           cheatEngine.addEvent(v, { source: 'ai', gaze: result.gaze_direction });
 
-          // Телефон анықталса — лезде блоктау + дауыс + мұғалімге ескерту
+          // Phone detected → instant lock + alert teacher
           if (v === 'PHONE_DETECTED') {
+            console.warn('[ProctorAI] PHONE DETECTED — triggering lock!');
             triggerPhoneLock();
           }
-          // Бірнеше адам — дауыстық ескерту + мұғалімге alert
+          // Multiple persons → audio alert + teacher alert
           if (v === 'MULTIPLE_PERSONS' || v === 'MULTIPLE_FACES') {
             const now = Date.now();
             speakMultiPersonAlert();
@@ -2262,9 +2288,9 @@
           cheatEngine.forceHardLock('AI: final_decision=terminate');
         }
       } catch (e) {
-        console.warn('AI frame error:', e.message);
+        console.error('[ProctorAI] AI frame error:', e.message, e);
       }
-    }, 'image/jpeg', 0.7);
+    }, 'image/jpeg', 0.85);
   }
 
   function violationLabel(v) {
