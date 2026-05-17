@@ -144,8 +144,9 @@ class CheatEngine {
       this.onTeacherAlert(this.riskScore, explanation);
     }
     if (lv === 'critical') {
+      this.triggerSoftLock('Критикалық қауіп — мұғалімге шұғыл хабарлама жіберілді');
       this.onTeacherAlert(this.riskScore, explanation);
-      this._hardLock(explanation);
+      // No automatic hard lock — teacher decides
     }
   }
 
