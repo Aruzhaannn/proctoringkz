@@ -11,8 +11,8 @@ class ObjectResult:
 
 
 class ObjectDetector:
-    _PHONE_CLASSES = {"cell phone"}
-    _BOOK_CLASSES = {"book"}
+    _PHONE_CLASSES = {"cell phone", "remote"}   # YOLO often classifies phones as "remote"
+    _BOOK_CLASSES = {"book", "laptop"}          # laptop also suspicious during exam
     _PERSON_CLASS = "person"
 
     def __init__(self):
@@ -20,7 +20,8 @@ class ObjectDetector:
         self._model = YOLO("yolov8n.pt")
 
     def detect(self, image: np.ndarray) -> ObjectResult:
-        results = self._model(image, verbose=False, conf=0.4)[0]
+        # Low confidence threshold (0.25) to catch phones even when partially visible
+        results = self._model(image, verbose=False, conf=0.25)[0]
 
         persons = 0
         objects: list[dict] = []

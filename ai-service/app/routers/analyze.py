@@ -101,30 +101,46 @@ async def analyze_frame(
 
     violations: list[str] = []
 
-    # ── 1. Face detection (Haar Cascade) ──────────────────────────────────
+    # ── 1. Face detection (MediaPipe) ──────────────────────────────────
     face_result = _face_detector.detect(image)
     if face_result.violation:
         violations.append(face_result.violation)
 
+    # ── 2. Gaze analysis (MediaPipe FaceMesh iris landmarks) ──────────
     gaze_direction = "unknown"
     looking_away   = False
-    if face_result.face_count == 1:
-        gaze = _gaze_analyzer.analyze(image, face_result.faces[0])
+    if face_result.face_count == 1 and face_result.landmarks:
+        gaze = _gaze_analyzer.analyze_from_landmarks(face_result.landmarks)
         gaze_direction = gaze.direction
         looking_away   = gaze.looking_away
         if gaze.violation:
             violations.append(gaze.violation)
 
-    # ── 2. Head pose (MediaPipe FaceMesh) ─────────────────────────────────
-    head = _head_pose.estimate(image)
-    if head.violation:
-        violations.append(head.violation)
+    # ── 3. Head pose (MediaPipe FaceMesh + solvePnP) ──────────────────
+    head_pitch = 0.0
+    head_yaw   = 0.0
+    head_roll  = 0.0
+    head_turned = False
+    if face_result.landmarks:
+        head = _head_pose.estimate_from_landmarks(
+            face_result.landmarks, image.shape
+        )
+        head_pitch  = head.pitch
+        head_yaw    = head.yaw
+        head_roll   = head.roll
+        head_turned = head.looking_away
+        if head.violation:
+            violations.append(head.violation)
+    elif face_result.face_count == 0:
+        # No face → head not detected
+        if "NO_FACE" not in violations:
+            violations.append("HEAD_NOT_DETECTED")
 
-    # ── 3. Object / person detection (YOLOv8) ─────────────────────────────
+    # ── 4. Object / person detection (YOLOv8) ─────────────────────────
     obj = _object_detector.detect(image)
     violations.extend(obj.violations)
 
-    # ── 4. Browser activity ────────────────────────────────────────────────
+    # ── 5. Browser activity ────────────────────────────────────────────
     violations.extend(["TAB_SWITCH"] * tab_switches)
     violations.extend(["COPY_PASTE"] * copy_paste_count)
     if window_minimized:
@@ -143,10 +159,10 @@ async def analyze_frame(
         faces=face_result.faces,
         gaze_direction=gaze_direction,
         looking_away=looking_away,
-        head_pitch=head.pitch,
-        head_yaw=head.yaw,
-        head_roll=head.roll,
-        head_turned=head.looking_away,
+        head_pitch=head_pitch,
+        head_yaw=head_yaw,
+        head_roll=head_roll,
+        head_turned=head_turned,
         persons_detected=obj.persons_detected,
         detected_objects=obj.objects,
         violations=list(dict.fromkeys(violations)),
