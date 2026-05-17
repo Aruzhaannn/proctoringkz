@@ -30,8 +30,8 @@ _MODEL_POINTS = np.array([
     [28.9,  -28.9,  -24.1],     # Right mouth corner
 ], dtype=np.float64)
 
-_YAW_LIMIT   = 20.0    # degrees — reduced from 30 for stricter detection
-_PITCH_LIMIT = 20.0    # degrees — reduced from 25 for stricter detection
+_YAW_LIMIT   = 55.0    # degrees — heavily increased to rely more on gaze
+_PITCH_LIMIT = 55.0    # degrees — heavily increased to rely more on gaze
 
 
 class HeadPoseEstimator:

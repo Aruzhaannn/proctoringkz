@@ -964,6 +964,7 @@
       <h2>Жүйені тексеру</h2>
       <p>Емтиханды бастамас бұрын прокторинг жүйесі сіздің камераңыз бен микрофоныңызға қосылуы керек.</p>
       <ul class="perm-list">
+        <li>🖥️ Экран — пәндік емес әрекеттерді тіркеу үшін (Тек "Весь экран" таңдаңыз)</li>
         <li>📷 Камера — бетті және бағытты бақылау үшін</li>
         <li>🎙️ Микрофон — бөгде дыбыстарды анықтау үшін</li>
       </ul>
@@ -1571,22 +1572,41 @@
   let micAnimFrame = null;
   let aiFrameInterval = null;
 
+  let screenStream = null;
+
   async function requestCamera() {
     try {
+      // 1. Сначала спрашиваем экран (важно чтобы выбрали ВЕСЬ ЭКРАН)
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+        video: { displaySurface: "monitor" },
+        audio: false
+      });
+      
+      const track = screenStream.getVideoTracks()[0];
+      const settings = track.getSettings();
+      if (settings.displaySurface && settings.displaySurface !== 'monitor') {
+        alert("ҚАТЕ: Сіз 'Весь экран' (Толық экран) емес, терезе немесе қойынды таңдадыңыз! Емтиханды бастау үшін міндетті түрде ТОЛЫҚ ЭКРАН таңдалуы тиіс.");
+        screenStream.getTracks().forEach(t => t.stop());
+        return; // Тоқтатамыз, ары қарай жібермейміз
+      }
+
+      // 2. Затем камеру
       cameraStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
         audio: true
       });
-      // 1. Успешно получили права - переходим на шаг 2 (Калибровка)
+
+      // 3. Успешно получили права - переходим на шаг 2 (Калибровка)
       document.getElementById('step1Perm').classList.add('hidden');
       document.getElementById('step2Calib').classList.remove('hidden');
       
-      // 2. Показываем видео в модалке настройки
+      // 4. Показываем видео в модалке настройки
       const setupVideo = document.getElementById('setupCamera');
       setupVideo.srcObject = cameraStream;
       setupVideo.play();
     } catch (err) {
       document.getElementById('permError').style.display = 'block';
+      document.getElementById('permError').textContent = '⚠ Қате: Экранға немесе камераға рұқсат берілмеді.';
       console.error(err);
     }
   }
@@ -1645,6 +1665,36 @@
   // ============================================================
   // ЕМТИХАНДЫ БАСТАУ (Калибровкадан кейін)
   // ============================================================
+  let compositeStream = null;
+
+  function initCompositeStream(screenS, camS) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1280; canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+    
+    const screenV = document.createElement('video');
+    screenV.srcObject = screenS; screenV.autoplay = true; screenV.muted = true;
+    
+    const camV = document.createElement('video');
+    camV.srcObject = camS; camV.autoplay = true; camV.muted = true;
+    
+    setInterval(() => {
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1280, 720);
+      if (screenV.readyState >= 2) {
+        ctx.drawImage(screenV, 0, 0, 1280, 720);
+      }
+      if (camV.readyState >= 2) {
+        const w = 240, h = 180;
+        const x = 1280 - w - 20, y = 720 - h - 20;
+        ctx.drawImage(camV, x, y, w, h);
+        ctx.strokeStyle = '#ff4040'; ctx.lineWidth = 3;
+        ctx.strokeRect(x, y, w, h);
+      }
+    }, 1000 / 20); // 20 fps to save CPU
+    
+    return canvas.captureStream(20);
+  }
+
   function startExamAfterSetup() {
     const video = document.getElementById('realCamera');
     video.srcObject = cameraStream;
@@ -1658,11 +1708,16 @@
       document.getElementById('faceStatus').className = 'cam-face-status loading';
       addLog('Камера мен калибровка сәтті аяқталды', 'ok');
       
+      compositeStream = initCompositeStream(screenStream, cameraStream);
+      
       evidenceCollector = new EvidenceCollector(video);
-      evidenceCollector.startBuffer(cameraStream);
+      // Буферге камера + экран бірге жазылады
+      evidenceCollector.startBuffer(compositeStream);
       startFaceSimulation();
       startMicMonitor();
-      startScreenRecording(cameraStream);
+      
+      // Записываем композитный поток
+      startScreenRecording(compositeStream);
       
       initExamSession(); // Бэкэндте сессияны енді бастаймыз
       if (!aiFrameInterval) aiFrameInterval = setInterval(sendFrameToAI, 3000);
@@ -2454,6 +2509,7 @@
     if (!confirm('Емтиханды тапсыруға сенімдісіз бе?')) return;
     stopScreenRecording();
     if (cameraStream)        cameraStream.getTracks().forEach(t => t.stop());
+    if (screenStream)        screenStream.getTracks().forEach(t => t.stop());
     if (faceDetectInterval)  clearInterval(faceDetectInterval);
     if (aiFrameInterval)     clearInterval(aiFrameInterval);
     if (micAnimFrame)        cancelAnimationFrame(micAnimFrame);
