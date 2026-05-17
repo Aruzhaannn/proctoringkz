@@ -42,6 +42,10 @@ public class ExamSession {
     @Builder.Default
     private Integer cheatScore = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean phoneUnlocked = false;
+
     @OneToMany(mappedBy = "examSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Violation> violations = new ArrayList<>();

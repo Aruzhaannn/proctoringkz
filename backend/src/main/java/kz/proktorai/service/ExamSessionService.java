@@ -136,6 +136,20 @@ public class ExamSessionService {
                 .orElseThrow(() -> new IllegalArgumentException("Session not found"));
     }
 
+    @Transactional
+    public SessionResponse phoneUnlock(Long sessionId) {
+        var session = findById(sessionId);
+        session.setPhoneUnlocked(true);
+        return toResponse(sessionRepository.save(session));
+    }
+
+    @Transactional
+    public SessionResponse phoneLock(Long sessionId) {
+        var session = findById(sessionId);
+        session.setPhoneUnlocked(false);
+        return toResponse(sessionRepository.save(session));
+    }
+
     private SessionResponse toResponse(ExamSession s) {
         return SessionResponse.builder()
                 .id(s.getId())
@@ -146,6 +160,7 @@ public class ExamSessionService {
                 .endTime(s.getEndTime())
                 .status(s.getStatus())
                 .cheatScore(s.getCheatScore())
+                .phoneUnlocked(s.getPhoneUnlocked())
                 .violations(s.getViolations().stream().map(this::toViolationResponse).toList())
                 .build();
     }

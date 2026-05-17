@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ProctorAI — Әкімші Панелі</title>
   <link rel="stylesheet" href="../css/global.css" />
+  <script src="../js/theme.js"></script>
   <script src="../js/api.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
@@ -38,7 +39,8 @@
     .arch-wrap { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:32px; display:flex; flex-direction:column; align-items:center; gap:14px; }
     .arch-row { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
     .arch-box { display:inline-flex; flex-direction:column; align-items:center; gap:5px; padding:12px 16px; min-width:105px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.78rem; font-weight:600; text-align:center; }
-    .arch-box span { font-size:1.3rem; }
+    .arch-box span { font-size:1.1rem; }
+    .arch-box svg { opacity:0.85; flex-shrink:0; }
     .arch-box small { font-size:0.65rem; color:var(--text-muted); font-weight:400; }
     .arch-box.accent { background:rgba(79,142,255,0.1); border-color:rgba(79,142,255,0.25); color:var(--accent); }
     .arch-box.green  { background:rgba(45,212,160,0.1); border-color:rgba(45,212,160,0.2); color:var(--accent-green); }
@@ -68,12 +70,19 @@
       <span class="logo-text">Proctor<em>AI</em></span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <span class="badge badge-blue">⚙️ ӘКІМШІ ПАНЕЛІ</span>
+      <span class="badge badge-blue">ӘКІМШІ ПАНЕЛІ</span>
     </div>
     <div class="nav-links">
-      <a href="../index.html" class="nav-link">← Кіру</a>
+      <a href="#" class="nav-link" onclick="Auth.clear();window.location.href='../index.html'">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Шығу
+      </a>
       <a href="student-dashboard.html" class="nav-link">Студент</a>
       <a href="teacher-dashboard.html" class="nav-link">Оқытушы</a>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Тақырыпты ауыстыру">
+        <span class="theme-icon-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <span class="theme-icon-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
+      </button>
     </div>
   </nav>
 
@@ -81,18 +90,45 @@
     <aside class="sidebar">
       <div class="sidebar-section">
         <div class="sidebar-label">Әкімшілік</div>
-        <a href="#" class="sidebar-item active"><span class="icon">🏠</span> Шолу</a>
-        <a href="#" class="sidebar-item"><span class="icon">👥</span> Пайдаланушылар <span class="badge-count">342</span></a>
-        <a href="#" class="sidebar-item"><span class="icon">📝</span> Емтихандар <span class="badge-count">14</span></a>
-        <a href="#" class="sidebar-item"><span class="icon">🔍</span> Аудит журналы</a>
-        <a href="#" class="sidebar-item"><span class="icon">📊</span> Аналитика</a>
+        <a href="#" class="sidebar-item active" data-section="overview">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+          Шолу
+        </a>
+        <a href="#" class="sidebar-item" data-section="users">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          Пайдаланушылар <span class="badge-count">342</span>
+        </a>
+        <a href="#" class="sidebar-item" data-section="exams">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/><line x1="9" y1="12" x2="15" y2="12"/></svg></span>
+          Емтихандар <span class="badge-count">14</span>
+        </a>
+        <a href="#" class="sidebar-item" data-section="audit">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          Аудит журналы
+        </a>
+        <a href="#" class="sidebar-item" data-section="analytics">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
+          Аналитика
+        </a>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Жүйе</div>
-        <a href="#" class="sidebar-item"><span class="icon">🖥️</span> Сервистер</a>
-        <a href="#" class="sidebar-item"><span class="icon">🔐</span> Қауіпсіздік</a>
-        <a href="#" class="sidebar-item"><span class="icon">⚙️</span> Конфигурация</a>
-        <a href="#" class="sidebar-item"><span class="icon">📡</span> Интеграциялар</a>
+        <a href="#" class="sidebar-item" data-section="services">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+          Сервистер
+        </a>
+        <a href="#" class="sidebar-item" data-section="security">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+          Қауіпсіздік
+        </a>
+        <a href="#" class="sidebar-item" data-section="config">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span>
+          Конфигурация
+        </a>
+        <a href="#" class="sidebar-item" data-section="integrations">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+          Интеграциялар
+        </a>
       </div>
       <div style="position:absolute;bottom:24px;left:16px;right:16px;">
         <div class="card" style="padding:14px;">
@@ -104,16 +140,30 @@
     </aside>
 
     <main class="main-content">
+      <!-- ===== ШОЛУ ===== -->
+      <div id="section-overview">
       <div class="page-header fade-in">
-        <h1>Жүйе Әкімшілігі ⚙️</h1>
+        <h1>Жүйе Әкімшілігі</h1>
         <p>Университет ProctorAI — барлық сервистер қалыпты жұмыс жасайды</p>
       </div>
 
       <div class="grid-4 fade-in-1" style="margin-bottom:28px;">
-        <div class="stat-card blue"><div class="stat-card-icon">👥</div><div class="stat-card-value">342</div><div class="stat-card-label">Барлық пайдаланушылар</div><div class="stat-card-change up">↑ 18 осы апта</div></div>
-        <div class="stat-card green"><div class="stat-card-icon">🎓</div><div class="stat-card-value">28</div><div class="stat-card-label">Айлық емтихандар</div><div class="stat-card-change up">↑ 5</div></div>
-        <div class="stat-card purple"><div class="stat-card-icon">🤖</div><div class="stat-card-value">1847</div><div class="stat-card-label">ЖИ анықтаулары</div><div class="stat-card-change up">↑ 12%</div></div>
-        <div class="stat-card green"><div class="stat-card-icon">🛡️</div><div class="stat-card-value">99%</div><div class="stat-card-label">Жүйе қолжетімділігі</div><div class="stat-card-change up">SLA орындалды</div></div>
+        <div class="stat-card blue">
+          <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-card-value">342</div><div class="stat-card-label">Барлық пайдаланушылар</div><div class="stat-card-change up">↑ 18 осы апта</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg></div>
+          <div class="stat-card-value">28</div><div class="stat-card-label">Айлық емтихандар</div><div class="stat-card-change up">↑ 5</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div class="stat-card-value">1847</div><div class="stat-card-label">ИИ анықтаулары</div><div class="stat-card-change up">↑ 12%</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div class="stat-card-value">99%</div><div class="stat-card-label">Жүйе қолжетімділігі</div><div class="stat-card-change up">SLA орындалды</div>
+        </div>
       </div>
 
       <!-- Сервис денсаулығы -->
@@ -130,7 +180,7 @@
           <div class="mini-chart"><div class="mini-bar" style="height:70%"></div><div class="mini-bar" style="height:85%"></div><div class="mini-bar" style="height:90%"></div><div class="mini-bar" style="height:80%"></div><div class="mini-bar" style="height:95%"></div><div class="mini-bar" style="height:100%"></div></div>
         </div>
         <div class="health-card">
-          <div class="health-top"><div><div class="health-name">ЖИ Сервисі</div><div class="health-stack">Python · OpenCV · TensorFlow</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div>
+          <div class="health-top"><div><div class="health-name">ИИ Сервисі</div><div class="health-stack">Python · OpenCV · TensorFlow</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div>
           <div class="health-uptime">98.7%</div>
           <div class="mini-chart"><div class="mini-bar" style="height:60%"></div><div class="mini-bar" style="height:75%"></div><div class="mini-bar" style="height:80%"></div><div class="mini-bar" style="height:90%"></div><div class="mini-bar" style="height:95%"></div><div class="mini-bar" style="height:88%"></div></div>
         </div>
@@ -152,7 +202,7 @@
       </div>
 
       <!-- Вкладки -->
-      <div class="card fade-in-3">
+      <div class="card fade-in-3" id="admin-tabs-card">
         <div class="tab-bar">
           <button class="tab-btn active" onclick="switchTab('users',this)">👥 Пайдаланушылар</button>
           <button class="tab-btn" onclick="switchTab('arch',this)">🏗️ Архитектура</button>
@@ -176,22 +226,23 @@
         <div id="tab-arch" class="tab-pane">
           <div class="arch-wrap">
             <div class="arch-box accent" style="min-width:150px;">
-              <span>🌐</span> Фронтенд
-              <small>React / Vue.js · WebRTC</small>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Фронтенд
+              <small>HTML/CSS/JS · WebRTC</small>
             </div>
             <div class="arch-arrow">↕ REST API / WebSocket</div>
             <div class="arch-row">
-              <div class="arch-box"><span>🔐</span>Аутент. Сервис<small>JWT/OAuth2</small></div>
-              <div class="arch-box"><span>📝</span>Емтихан Сервисі<small>Spring Boot</small></div>
-              <div class="arch-box"><span>👁️</span>Прокторинг<small>WebRTC</small></div>
-              <div class="arch-box purple"><span>🤖</span>ЖИ Сервисі<small>Python/OpenCV</small></div>
-              <div class="arch-box"><span>📊</span>Аналитика<small>Kafka/Redis</small></div>
+              <div class="arch-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Аутент. Сервис<small>JWT/OAuth2</small></div>
+              <div class="arch-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/></svg>Емтихан Сервисі<small>Spring Boot</small></div>
+              <div class="arch-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Прокторинг<small>WebRTC</small></div>
+              <div class="arch-box purple"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>ИИ Сервисі<small>Python/OpenCV</small></div>
+              <div class="arch-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>Аналитика<small>Kafka/Redis</small></div>
             </div>
-            <div class="arch-kafka">⇅ Apache Kafka — Оқиға ағыны (Event Streaming) ⇅</div>
+            <div class="arch-kafka">Apache Kafka — Оқиға ағыны (Event Streaming)</div>
             <div class="arch-row">
-              <div class="arch-box green"><span>🗄️</span>PostgreSQL<small>JPA/Hibernate</small></div>
-              <div class="arch-box green"><span>⚡</span>Redis Cache<small>Сессия/Кэш</small></div>
-              <div class="arch-box green"><span>🐳</span>Kubernetes<small>Оркестрация</small></div>
+              <div class="arch-box green"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>PostgreSQL<small>JPA/Hibernate</small></div>
+              <div class="arch-box green"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Redis Cache<small>Сессия/Кэш</small></div>
+              <div class="arch-box green"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>Kubernetes<small>Оркестрация</small></div>
             </div>
           </div>
         </div>
@@ -229,11 +280,161 @@
           </table>
         </div>
       </div>
+      </div><!-- /section-overview -->
+
+      <!-- ===== ПАЙДАЛАНУШЫЛАР ===== -->
+      <div id="section-users" style="display:none;">
+        <div class="page-header fade-in"><h1>👥 Пайдаланушылар</h1><p>Жүйеге тіркелген барлық пайдаланушылар</p></div>
+        <div class="card fade-in">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <input type="text" placeholder="🔍 Пайдаланушыларды іздеу..." style="background:var(--bg);border:1px solid var(--border);color:var(--text-primary);padding:9px 14px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:0.875rem;outline:none;width:260px;">
+            <div style="display:flex;gap:8px;"><select style="background:var(--bg);border:1px solid var(--border);color:var(--text-secondary);padding:8px 12px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:0.82rem;outline:none;cursor:pointer;"><option>Барлық рөлдер</option><option>Студент</option><option>Оқытушы</option><option>Әкімші</option></select><button class="btn btn-primary" style="font-size:0.8rem;">+ Қосу</button></div>
+          </div>
+          <div id="userListAdmin"></div>
+        </div>
+      </div>
+
+      <!-- ===== ЕМТИХАНДАР ===== -->
+      <div id="section-exams" style="display:none;">
+        <div class="page-header fade-in"><h1>📝 Емтихандарды басқару</h1><p>Барлық емтихандар тізімі</p></div>
+        <div class="card fade-in">
+          <table class="data-table">
+            <thead><tr><th>Емтихан атауы</th><th>Курс</th><th>Оқытушы</th><th>Студенттер</th><th>Режим</th><th>Мәртебе</th><th>Әрекет</th></tr></thead>
+            <tbody>
+              <tr><td><div style="font-weight:500;color:var(--text-primary)">Дер. Құрылымдары — Аралық</div></td><td>АТ401</td><td>Проф. Айбек Н.</td><td>28</td><td><span class="badge badge-red">Толық бақылау</span></td><td><span class="badge badge-green"><span class="status-dot online"></span> Тікелей</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Қарау</button></td></tr>
+              <tr><td><div style="font-weight:500;color:var(--text-primary)">ДҚБЖ — Қорытынды</div></td><td>АТ312</td><td>Проф. Гүлмира С.</td><td>35</td><td><span class="badge badge-blue">Прокторинг</span></td><td><span class="badge badge-yellow">Жоспарланған</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Өңдеу</button></td></tr>
+              <tr><td><div style="font-weight:500;color:var(--text-primary)">ОЖ — Бақылау жұмысы</div></td><td>АТ380</td><td>Проф. Бекбол М.</td><td>42</td><td><span class="badge badge-green">Қарапайым тест</span></td><td><span class="badge badge-green">Аяқталды</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Есеп</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== АУДИТ ЖУРНАЛЫ ===== -->
+      <div id="section-audit" style="display:none;">
+        <div class="page-header fade-in"><h1>🔍 Аудит журналы</h1><p>Жүйе іс-шаралары журналы</p></div>
+        <div class="card fade-in"><div id="auditLogFull"></div></div>
+      </div>
+
+      <!-- ===== АНАЛИТИКА ===== -->
+      <div id="section-analytics" style="display:none;">
+        <div class="page-header fade-in"><h1>📊 Аналитика</h1><p>Нақты уақыттағы жүйе статистикасы</p></div>
+        <div class="grid-4 fade-in" style="margin-bottom:24px;">
+          <div class="stat-card blue"><div class="stat-card-icon">📝</div><div class="stat-card-value" id="analytics-total-exams">—</div><div class="stat-card-label">Барлық емтихандар</div></div>
+          <div class="stat-card green"><div class="stat-card-icon">🎓</div><div class="stat-card-value" id="analytics-total-sessions">—</div><div class="stat-card-label">Барлық сессиялар</div></div>
+          <div class="stat-card purple"><div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="stat-card-value" id="analytics-total-violations">—</div><div class="stat-card-label">Барлық бұзушылықтар</div></div>
+          <div class="stat-card orange"><div class="stat-card-icon">🚨</div><div class="stat-card-value" id="analytics-high-risk">—</div><div class="stat-card-label">Тәуекелді студенттер</div></div>
+        </div>
+        <div class="grid-2 fade-in" style="margin-bottom:24px;">
+          <div class="card">
+            <div style="font-family:var(--font-display);font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">ЖИІ КЕЗДЕСЕТІН БҰЗУШЫЛЫҚТАР</div>
+            <div id="analytics-violations-list"><div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:20px;">Жүктелуде...</div></div>
+          </div>
+          <div class="card">
+            <div style="font-family:var(--font-display);font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">ТӘУЕКЕЛДІ СТУДЕНТТЕР</div>
+            <div id="analytics-highrisk-list"><div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:20px;">Жүктелуде...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== СЕРВИСТЕР ===== -->
+      <div id="section-services" style="display:none;">
+        <div class="page-header fade-in"><h1>🖥️ Сервистер</h1><p>Микросервистер денсаулығы мен мониторингі</p></div>
+        <div class="health-grid fade-in">
+          <div class="health-card"><div class="health-top"><div><div class="health-name">Аутентификация Сервисі</div><div class="health-stack">JWT · OAuth2</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div><div class="health-uptime">99.9%</div></div>
+          <div class="health-card"><div class="health-top"><div><div class="health-name">Емтихан Сервисі</div><div class="health-stack">Spring Boot · PostgreSQL</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div><div class="health-uptime">99.8%</div></div>
+          <div class="health-card"><div class="health-top"><div><div class="health-name">ИИ Сервисі</div><div class="health-stack">Python · OpenCV</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div><div class="health-uptime">98.7%</div></div>
+          <div class="health-card"><div class="health-top"><div><div class="health-name">Прокторинг Сервисі</div><div class="health-stack">WebRTC · Kafka</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div><div class="health-uptime">99.5%</div></div>
+          <div class="health-card"><div class="health-top"><div><div class="health-name">Аналитика Сервисі</div><div class="health-stack">Kafka · Redis</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div><div class="health-uptime">99.9%</div></div>
+          <div class="health-card"><div class="health-top"><div><div class="health-name">Apache Kafka</div><div class="health-stack">Event Streaming</div></div><span class="badge badge-green"><span class="status-dot online"></span> Жұмыс жасайды</span></div><div class="health-uptime">99.9%</div></div>
+        </div>
+      </div>
+
+      <!-- ===== ҚАУІПСІЗДІК ===== -->
+      <div id="section-security" style="display:none;">
+        <div class="page-header fade-in"><h1>🔐 Қауіпсіздік</h1><p>Жүйе қауіпсіздік параметрлері</p></div>
+        <div class="grid-2 fade-in">
+          <div class="card"><h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px;">Аутентификация</h3>
+            <div style="display:flex;flex-direction:column;gap:12px;font-size:0.85rem;">
+              <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-muted);">JWT Token мерзімі</span><span style="font-weight:600;">24 сағат</span></div>
+              <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-muted);">2FA аутентификация</span><span style="color:var(--accent-green);font-weight:600;">Қосулы ✓</span></div>
+              <div style="display:flex;justify-content:space-between;padding:10px 0;"><span style="color:var(--text-muted);">Сессия ұзақтылығы</span><span style="font-weight:600;">4 сағат</span></div>
+            </div>
+          </div>
+          <div class="card"><h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px;">Деректер қорғауы</h3>
+            <div style="display:flex;flex-direction:column;gap:12px;font-size:0.85rem;">
+              <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-muted);">Шифрлау</span><span style="color:var(--accent-green);font-weight:600;">AES-256 ✓</span></div>
+              <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-muted);">HTTPS</span><span style="color:var(--accent-green);font-weight:600;">Белсенді ✓</span></div>
+              <div style="display:flex;justify-content:space-between;padding:10px 0;"><span style="color:var(--text-muted);">Деректер сақтау</span><span style="font-weight:600;">30 күн</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== КОНФИГУРАЦИЯ ===== -->
+      <div id="section-config" style="display:none;">
+        <div class="page-header fade-in"><h1>Конфигурация</h1><p>Жүйе параметрлері</p></div>
+        <div class="card fade-in">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);">
+              <div><div style="font-weight:600;font-size:0.88rem;">Ескерту шегі</div><div style="font-size:0.75rem;color:var(--text-muted);">Бұзушылық санықтан кейін ескерту жіберу</div></div>
+              <span style="font-weight:700;color:var(--accent);">3 рет</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);">
+              <div><div style="font-weight:600;font-size:0.88rem;">AI кадр жіберу аралығы</div><div style="font-size:0.75rem;color:var(--text-muted);">Секунд сайын AI анализге кадр жіберу</div></div>
+              <span style="font-weight:700;color:var(--accent);">3 секунд</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;">
+              <div><div style="font-weight:600;font-size:0.88rem;">Сессия мерзімі</div><div style="font-size:0.75rem;color:var(--text-muted);">Емтихан сессиясының максималды ұзақтылығы</div></div>
+              <span style="font-weight:700;color:var(--accent);">4 сағат</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ИНТЕГРАЦИЯЛАР ===== -->
+      <div id="section-integrations" style="display:none;">
+        <div class="page-header fade-in"><h1>📡 Интеграциялар</h1><p>Сыртқы жүйелермен байланыс</p></div>
+        <div class="grid-2 fade-in">
+          <div class="card"><h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px;">Белсенді интеграциялар</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.85rem;"><span>🐘 PostgreSQL</span><span class="badge badge-green">Қосылған</span></div>
+              <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.85rem;"><span>⚡ Redis</span><span class="badge badge-green">Қосылған</span></div>
+              <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.85rem;"><span>📨 Apache Kafka</span><span class="badge badge-green">Қосылған</span></div>
+            </div>
+          </div>
+          <div class="card"><h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px;">Жоспарлы интеграциялар</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.85rem;"><span>📊 Grafana Monitoring</span><span class="badge badge-yellow">Жоспарланған</span></div>
+              <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.85rem;"><span>📧 Email сервисі</span><span class="badge badge-yellow">Жоспарланған</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
   <script>
     Auth.check();
+
+    // Admin sidebar навигация
+    const adminSections = ['overview','users','exams','audit','analytics','services','security','config','integrations'];
+    function showAdminSection(name) {
+      adminSections.forEach(id => {
+        const el = document.getElementById('section-' + id);
+        if (el) el.style.display = (id === name) ? '' : 'none';
+      });
+      document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
+        item.classList.toggle('active', item.dataset.section === name);
+      });
+    }
+    document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
+      item.addEventListener('click', e => {
+        e.preventDefault();
+        if (item.dataset.section === 'analytics') { showAdminSection('analytics'); loadStats(); return; }
+        showAdminSection(item.dataset.section);
+      });
+    });
 
     function switchTab(name, btn) {
       document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
@@ -245,10 +446,10 @@
     // ── Load exams for admin ──────────────────────────────────────
     async function loadExams() {
       try {
-        const exams = await ExamAPI.getAll ? ExamAPI.getAll() : ExamAPI.getActive();
+        const exams = await ExamAPI.getAll();
         const tbody = document.querySelector('#tab-exams table tbody');
         if (!tbody) return;
-        tbody.innerHTML = exams.length
+        tbody.innerHTML = exams && exams.length
           ? exams.map(e => `<tr>
               <td><div style="font-weight:500;color:var(--text-primary)">${e.title}</div></td>
               <td>${e.createdByName || '—'}</td>
@@ -257,16 +458,46 @@
               <td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Есеп</button></td>
             </tr>`).join('')
           : '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;">Емтихандар жоқ</td></tr>';
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error('loadExams:', e); }
     }
 
-    // ── Load stats ────────────────────────────────────────────────
+    // ── Load analytics stats ──────────────────────────────────────
     async function loadStats() {
       try {
-        const exams = await ExamAPI.getActive();
-        const activeEl = document.querySelectorAll('.stat-card-value');
-        if (activeEl[1]) activeEl[1].textContent = exams.length;
-      } catch {}
+        const dash = await AnalyticsAPI.getDashboard();
+        if (!dash) return;
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set('analytics-total-exams',      dash.totalExams);
+        set('analytics-total-sessions',   dash.totalSessions);
+        set('analytics-total-violations', dash.totalViolations);
+        set('analytics-high-risk',        dash.highRiskStudents);
+
+        const violEl = document.getElementById('analytics-violations-list');
+        if (violEl && dash.topViolations && dash.topViolations.length) {
+          violEl.innerHTML = dash.topViolations.map(v => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+              <span style="font-size:0.85rem;color:var(--text-secondary)">${v.violationType}</span>
+              <span class="badge badge-red">${v.count}</span>
+            </div>`).join('');
+        } else if (violEl) {
+          violEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:20px;">Бұзушылықтар жоқ</div>';
+        }
+      } catch (e) { console.error('loadStats:', e); }
+
+      try {
+        const highRisk = await AnalyticsAPI.getHighRisk();
+        const el = document.getElementById('analytics-highrisk-list');
+        if (!el) return;
+        if (highRisk && highRisk.length) {
+          el.innerHTML = highRisk.map(s => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+              <span style="font-size:0.85rem;color:var(--text-secondary)">${s.studentName || s.studentId}</span>
+              <span class="badge badge-red">балл: ${Math.round(s.avgCheatScore || 0)}%</span>
+            </div>`).join('');
+        } else {
+          el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:20px;">Тәуекелді студенттер жоқ</div>';
+        }
+      } catch (e) { console.error('loadHighRisk:', e); }
     }
 
     // ── Render static audit log ───────────────────────────────────
@@ -285,10 +516,21 @@
     }
 
     // ── Render user list placeholder ──────────────────────────────
+    const placeholder = `<div style="color:var(--text-muted);padding:16px;text-align:center;">Пайдаланушылар тізімі үшін User Management API-ны қосыңыз</div>`;
     const userListEl = document.getElementById('userList');
-    if (userListEl) {
-      userListEl.innerHTML = `<div style="color:var(--text-muted);padding:16px;text-align:center;">
-        Пайдаланушылар тізімі үшін User Management API-ны қосыңыз</div>`;
+    if (userListEl) userListEl.innerHTML = placeholder;
+    const userListAdminEl = document.getElementById('userListAdmin');
+    if (userListAdminEl) userListAdminEl.innerHTML = placeholder;
+
+    // Populate section-audit with same content
+    const auditFullEl = document.getElementById('auditLogFull');
+    if (auditFullEl) {
+      auditFullEl.innerHTML = audits.map(a => `
+        <div class="audit-item">
+          <div class="audit-time">${a.t}</div>
+          <div class="audit-dot" style="background:${a.c}"></div>
+          <div class="audit-what"><span class="audit-who">${a.who}</span> — ${a.what}</div>
+        </div>`).join('');
     }
 
     loadExams();

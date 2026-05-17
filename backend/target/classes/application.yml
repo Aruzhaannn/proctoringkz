@@ -42,9 +42,7 @@ spring:
         spring.json.trusted.packages: "kz.proktorai.kafka"
 
   cache:
-    type: redis
-    redis:
-      time-to-live: 600000   # 10 минут (ms)
+    type: simple
 
 server:
   port: 8080

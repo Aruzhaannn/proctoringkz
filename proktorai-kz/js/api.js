@@ -18,19 +18,43 @@ const Auth = {
   role()    { const u = Auth.user(); return u ? u.role : null; },
   clear()   { localStorage.removeItem('accessToken'); localStorage.removeItem('refreshToken'); localStorage.removeItem('user'); },
   check()   {
-    if (!Auth.token()) { window.location.href = '/index.html'; return false; }
+    if (!Auth.token()) {
+      const inPages = window.location.pathname.includes('/pages/');
+      window.location.href = inPages ? '../index.html' : 'index.html';
+      return false;
+    }
     return true;
   }
 };
 
 // ── Generic fetch wrapper ─────────────────────────────────────
-async function apiFetch(url, options = {}) {
+let _refreshing = false;
+async function apiFetch(url, options = {}, _retry = false) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (Auth.token()) headers['Authorization'] = 'Bearer ' + Auth.token();
 
   const res = await fetch(url, { ...options, headers });
 
-  if (res.status === 401) { Auth.clear(); window.location.href = '/index.html'; return; }
+  if (res.status === 401 && !_retry && !_refreshing) {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken && refreshToken !== 'demo-refresh') {
+      _refreshing = true;
+      try {
+        const r = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        if (r.ok) {
+          const data = await r.json();
+          Auth.save(data);
+          _refreshing = false;
+          return apiFetch(url, options, true);
+        }
+      } catch (_) {}
+      _refreshing = false;
+    }
+    Auth.clear(); window.location.href = '/index.html'; return;
+  }
   if (!res.ok) {
     const err = await res.text();
     throw new Error(err || `HTTP ${res.status}`);
@@ -48,6 +72,7 @@ const AuthAPI = {
 
 // ── Exam API ─────────────────────────────────────────────────
 const ExamAPI = {
+  getAll:     ()       => apiFetch(`${API_BASE}/exams`),
   getActive:  ()       => apiFetch(`${API_BASE}/exams/active`),
   getById:    (id)     => apiFetch(`${API_BASE}/exams/${id}`),
   getMine:    ()       => apiFetch(`${API_BASE}/exams/my`),
@@ -63,6 +88,29 @@ const SessionAPI = {
   getMy:         ()        => apiFetch(`${API_BASE}/sessions/my`),
   getByExam:     (examId)  => apiFetch(`${API_BASE}/sessions/exam/${examId}`),
   addViolation:  (data)    => apiFetch(`${API_BASE}/sessions/violations`, { method:'POST', body: JSON.stringify(data) }),
+  phoneUnlock:   (id)      => apiFetch(`${API_BASE}/sessions/${id}/phone-unlock`, { method:'PATCH' }),
+  phoneLock:     (id)      => apiFetch(`${API_BASE}/sessions/${id}/phone-lock`,   { method:'PATCH' }),
+};
+
+// ── Audit Log API ────────────────────────────────────────────
+const AuditAPI = {
+  log: (action, sessionId, details) => apiFetch(`${API_BASE}/audit`, {
+    method: 'POST',
+    body: JSON.stringify({ action, sessionId, details, browserInfo: navigator.userAgent.substring(0, 200) })
+  }).catch(() => {}),
+  getAll:       ()   => apiFetch(`${API_BASE}/audit`),
+  getBySession: (id) => apiFetch(`${API_BASE}/audit/session/${id}`),
+};
+
+// ── Analytics API ─────────────────────────────────────────────
+const ANALYTICS_BASE = IS_DOCKER ? '/api/v1/analytics' : 'http://localhost:8082/api/v1/analytics';
+const AnalyticsAPI = {
+  getDashboard:    ()           => apiFetch(`${ANALYTICS_BASE}/dashboard`),
+  getAllExams:      ()           => apiFetch(`${ANALYTICS_BASE}/exams`),
+  getExam:         (id)         => apiFetch(`${ANALYTICS_BASE}/exams/${id}`),
+  getAllStudents:   ()           => apiFetch(`${ANALYTICS_BASE}/students`),
+  getHighRisk:     ()           => apiFetch(`${ANALYTICS_BASE}/students/high-risk`),
+  getViolations:   ()           => apiFetch(`${ANALYTICS_BASE}/violations/summary`),
 };
 
 // ── AI Service ────────────────────────────────────────────────

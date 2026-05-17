@@ -18,5 +18,6 @@ public class SessionResponse {
     private LocalDateTime endTime;
     private SessionStatus status;
     private Integer cheatScore;
+    private Boolean phoneUnlocked;
     private List<ViolationResponse> violations;
 }

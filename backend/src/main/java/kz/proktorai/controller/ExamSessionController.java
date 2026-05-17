@@ -46,6 +46,20 @@ public class ExamSessionController {
         return ResponseEntity.ok(sessionService.terminateSession(id));
     }
 
+    // Teacher/Admin — телефон блоктан шығару (рұқсат беру)
+    @PatchMapping("/{id}/phone-unlock")
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
+    public ResponseEntity<SessionResponse> phoneUnlock(@PathVariable Long id) {
+        return ResponseEntity.ok(sessionService.phoneUnlock(id));
+    }
+
+    // Teacher/Admin — телефон блоктауды қайта қою
+    @PatchMapping("/{id}/phone-lock")
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
+    public ResponseEntity<SessionResponse> phoneLock(@PathVariable Long id) {
+        return ResponseEntity.ok(sessionService.phoneLock(id));
+    }
+
     // AI Service — бұзушылық қосу
     @PostMapping("/violations")
     public ResponseEntity<ViolationResponse> addViolation(

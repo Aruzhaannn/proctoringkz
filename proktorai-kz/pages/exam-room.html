@@ -5,11 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ProctorAI — Емтихан Бөлмесі</title>
   <link rel="stylesheet" href="../css/global.css" />
+  <script src="../js/theme.js"></script>
   <script src="../js/api.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script src="../js/cheating-engine.js"></script>
+  <script src="../js/evidence-collector.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
   <style>
     body { overflow: hidden; }
+    @media (max-width: 768px) { body { overflow-y: auto; } }
     .exam-layout {
       display: grid;
       grid-template-columns: 1fr 320px;
@@ -329,10 +334,506 @@
     .terminate-redirect {
       font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;
     }
+
+    /* ======== SOFT-LOCK OVERLAY ======== */
+    .softlock-overlay {
+      position: fixed; inset: 0; z-index: 99990;
+      background: rgba(5,8,16,0.93); backdrop-filter: blur(14px);
+      display: flex; align-items: center; justify-content: center;
+      animation: overlayFadeIn 0.2s ease;
+    }
+    .softlock-overlay.hidden { display: none; }
+    .softlock-box { text-align: center; max-width: 380px; padding: 20px; }
+    .softlock-icon { font-size: 3.5rem; margin-bottom: 12px; display: block; animation: lockPulse 1s ease infinite; }
+    @keyframes lockPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    .softlock-title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: var(--accent-yellow); margin-bottom: 10px; }
+    .softlock-msg { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px; }
+    .softlock-timer-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .softlock-timer { font-family: var(--font-display); font-size: 3.5rem; font-weight: 800; color: var(--accent-yellow); line-height: 1; }
+    .softlock-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+    /* ======== БЕТ АНЫҚТАЛМАДЫ — PERSISTENT OVERLAY ======== */
+    .noface-overlay {
+      position: fixed; inset: 0; z-index: 99991;
+      background: rgba(5,8,16,0.96); backdrop-filter: blur(18px);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 18px;
+      animation: overlayFadeIn 0.2s ease;
+    }
+    .noface-overlay.hidden { display: none; }
+    .noface-icon { font-size: 4.5rem; animation: lockPulse 1.2s ease infinite; }
+    .noface-title {
+      font-family: var(--font-display); font-size: 1.7rem; font-weight: 800;
+      color: #ff4040; text-align: center;
+    }
+    .noface-msg {
+      color: var(--text-secondary); font-size: 0.95rem; line-height: 1.7;
+      text-align: center; max-width: 400px;
+    }
+    .noface-countdown-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .noface-countdown {
+      font-family: var(--font-display); font-size: 3.5rem; font-weight: 800;
+      color: #ff4040; line-height: 1;
+      animation: pulse-dot 1s ease infinite;
+    }
+    .noface-countdown-sub { font-size: 0.78rem; color: var(--text-muted); }
+    .noface-ring {
+      width: 56px; height: 56px; border-radius: 50%;
+      border: 3px solid rgba(255,64,64,0.2);
+      border-top-color: #ff4040;
+      animation: spinRing 1s linear infinite;
+    }
+    @keyframes spinRing { to { transform: rotate(360deg); } }
+
+    /* ======== ТАБ ЕСКЕРТУ ОВЕРЛЕЙІ (3-УДАР ЖҮЙЕСІ) ======== */
+    .tab-warning-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(5,8,16,0.9); backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      animation: overlayFadeIn 0.25s ease;
+    }
+    .tab-warning-overlay.hidden { display: none; }
+    .tab-warning-box {
+      background: linear-gradient(145deg, #120a00, #1a0f00);
+      border: 2px solid #ff8c00; border-radius: 20px;
+      padding: 44px 40px; max-width: 500px; width: 90%;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(255,140,0,0.3), 0 8px 40px rgba(0,0,0,0.7);
+      animation: warningPulse 0.4s ease;
+    }
+    .tab-warning-box.danger {
+      border-color: #ff3333;
+      background: linear-gradient(145deg, #1a0a0a, #120808);
+      box-shadow: 0 0 60px rgba(255,50,50,0.3), 0 8px 40px rgba(0,0,0,0.7);
+    }
+    .tab-strike-dots { display: flex; justify-content: center; gap: 12px; margin-bottom: 24px; }
+    .tab-dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid rgba(255,140,0,0.4); background: transparent;
+      transition: all 0.3s ease;
+    }
+    .tab-dot.active { background: #ff8c00; border-color: #ff8c00; box-shadow: 0 0 12px rgba(255,140,0,0.6); }
+    .tab-dot.danger.active { background: #ff3333; border-color: #ff3333; box-shadow: 0 0 12px rgba(255,50,50,0.6); }
+    .tab-warning-icon { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+    .tab-warning-title {
+      font-family: var(--font-display); font-size: 1.5rem; font-weight: 800;
+      color: #ff8c00; margin-bottom: 12px;
+    }
+    .tab-warning-box.danger .tab-warning-title { color: #ff5050; }
+    .tab-warning-msg {
+      font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px;
+    }
+    .tab-warning-rule {
+      background: rgba(255,140,0,0.08); border: 1px solid rgba(255,140,0,0.2);
+      border-radius: 10px; padding: 14px 18px; margin-bottom: 24px;
+      font-size: 0.85rem; color: #ffaa60; text-align: left; line-height: 1.5;
+    }
+    .tab-warning-btn {
+      background: linear-gradient(135deg, #b86000, #d97c00);
+      color: #fff; border: none; border-radius: 12px;
+      padding: 14px 36px; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; width: 100%; transition: all 0.2s ease;
+    }
+    .tab-warning-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(200,100,0,0.4); }
+
+    /* ======== КӨЗ БАҚЫЛАУ ТАЙМЕРІ ======== */
+    .gaze-timer-banner {
+      position: fixed; top: 76px; right: 24px; z-index: 99994;
+      background: linear-gradient(135deg, rgba(255,140,0,0.97), rgba(200,80,0,0.97));
+      color: #fff; border-radius: 12px; padding: 12px 20px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 6px 30px rgba(255,120,0,0.5);
+      border: 1px solid rgba(255,180,60,0.4);
+      animation: phoneBannerIn 0.3s ease;
+      min-width: 220px;
+    }
+    .gaze-timer-banner.hidden { display: none; }
+    .gaze-timer-count {
+      font-family: var(--font-display); font-size: 2rem; font-weight: 800;
+      min-width: 36px; text-align: center;
+    }
+    .gaze-timer-text { flex: 1; }
+    .gaze-timer-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; }
+    .gaze-timer-sub { font-size: 0.72rem; opacity: 0.88; }
+
+    /* ======== ЭКРАН ЖАЗУ ИНДИКАТОРЫ ======== */
+    .screen-rec-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.68rem; color: #ff5050; font-weight: 700;
+      background: rgba(255,50,50,0.1); border: 1px solid rgba(255,50,50,0.2);
+      border-radius: 6px; padding: 3px 8px; cursor: pointer;
+    }
+    .screen-rec-badge.inactive { color: var(--text-muted); background: transparent; border-color: var(--border); }
+
+    /* ======== ТЕЛЕФОН АЛЕРТ БАННЕР ======== */
+    .phone-alert-banner {
+      position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+      z-index: 99995;
+      background: linear-gradient(135deg, rgba(220,40,0,0.97), rgba(180,20,0,0.97));
+      color: #fff; border-radius: 14px; padding: 14px 26px;
+      display: flex; align-items: center; gap: 14px;
+      max-width: 480px; width: 90%;
+      box-shadow: 0 8px 40px rgba(255,50,0,0.55);
+      border: 1px solid rgba(255,100,60,0.45);
+      animation: phoneBannerIn 0.3s ease;
+    }
+    .phone-alert-banner.hidden { display: none; }
+    @keyframes phoneBannerIn {
+      from { opacity:0; transform: translateX(-50%) translateY(-18px); }
+      to   { opacity:1; transform: translateX(-50%) translateY(0); }
+    }
+    .pa-icon { font-size: 2rem; flex-shrink: 0; }
+    .pa-text  { flex: 1; }
+    .pa-title { font-family: var(--font-display); font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+    .pa-sub   { font-size: 0.78rem; opacity: 0.88; }
+    .pa-pulse { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: pulse-dot 0.6s ease infinite; flex-shrink: 0; }
+
+    /* ======== ТЕЛЕФОН БЛОК ОВЕРЛЕЙІ ======== */
+    .phonelock-overlay {
+      position: fixed; inset: 0; z-index: 999990;
+      background: linear-gradient(135deg, #080205, #180308);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 20px;
+      animation: overlayFadeIn 0.3s ease;
+    }
+    .phonelock-overlay.hidden { display: none; }
+    .phonelock-icon { font-size: 5rem; animation: shake 0.6s ease; }
+    .phonelock-title { font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: #ff2222; text-align: center; }
+    .phonelock-sub { font-size: 1rem; color: var(--text-secondary); text-align: center; max-width: 420px; line-height: 1.6; }
+    .phonelock-status {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,30,30,0.08); border: 1px solid rgba(255,30,30,0.25);
+      border-radius: 12px; padding: 14px 22px; margin-top: 8px;
+    }
+    .phonelock-spinner {
+      width: 22px; height: 22px; border: 2px solid rgba(255,64,64,0.2);
+      border-top-color: #ff4040; border-radius: 50%;
+      animation: spinRing 1s linear infinite; flex-shrink: 0;
+    }
+    .phonelock-status-text { font-size: 0.9rem; color: #ff8080; font-weight: 600; }
+    .phonelock-timer-info { font-size: 0.78rem; color: var(--text-muted); text-align: center; max-width: 400px; }
+    .phonelock-badge {
+      background: rgba(255,30,30,0.12); border: 1px solid rgba(255,30,30,0.3);
+      border-radius: 20px; padding: 6px 18px;
+      font-size: 0.78rem; font-weight: 700; color: #ff6060;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+
+    /* ======== РИСК ДЕҢГЕЙ ИНДИКАТОРЫ ======== */
+    .risk-level-indicator { padding: 12px 20px 0; }
+    .risk-level-track {
+      display: flex; gap: 4px; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 6px;
+    }
+    .risk-seg { flex: 1; border-radius: 2px; opacity: 0.25; transition: opacity 0.4s ease; }
+    .risk-seg.active { opacity: 1; }
+    .risk-seg.low      { background: var(--accent-green); }
+    .risk-seg.medium   { background: var(--accent-yellow); }
+    .risk-seg.high     { background: #ff8c00; }
+    .risk-seg.critical { background: #ff3333; }
+    .risk-level-label { font-size: 0.72rem; font-weight: 700; color: var(--accent-green); transition: color 0.4s ease; }
+
+    /* ======== AI ТҮСІНДІРМЕСІ ======== */
+    .ai-explain-section {
+      background: rgba(79,142,255,0.06); border: 1px solid rgba(79,142,255,0.2);
+      border-radius: 10px; padding: 12px 14px; margin-top: 16px; text-align: left;
+    }
+    .ai-explain-title { font-size: 0.72rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .ai-explain-text  { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.7; white-space: pre-line; }
+
+    /* ======== ДӘЛЕЛДЕР ЖУРНАЛЫ ======== */
+    .evidence-section { padding: 0 20px 16px; border-top: 1px solid var(--border); }
+    .evidence-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.72rem;
+    }
+    .evidence-item:last-child { border-bottom: none; }
+    .ev-shot {
+      width: 44px; height: 32px; border-radius: 4px; object-fit: cover; flex-shrink: 0;
+      border: 1px solid var(--border); background: var(--surface-3);
+    }
+    .ev-shot-placeholder {
+      width: 44px; height: 32px; border-radius: 4px; background: var(--surface-3);
+      border: 1px solid var(--border); flex-shrink: 0; display: flex;
+      align-items: center; justify-content: center; font-size: 1rem;
+    }
+    .ev-body { flex: 1; min-width: 0; }
+    .ev-type { font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ev-meta { color: var(--text-muted); margin-top: 2px; }
+    .ev-badge {
+      font-size: 0.62rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; flex-shrink: 0;
+    }
+    .ev-badge.low      { background: rgba(45,212,160,0.15); color: var(--accent-green); }
+    .ev-badge.medium   { background: rgba(245,200,66,0.15); color: var(--accent-yellow); }
+    .ev-badge.high     { background: rgba(255,140,0,0.15);  color: #ff8c00; }
+    .ev-badge.critical { background: rgba(255,50,50,0.15);  color: #ff5050; }
+
+    /* ======== ДӘЛЕЛ СУРЕТІН ҮЛКЕЙТУ МОДАЛІ ======== */
+    .ev-photo-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.92); z-index: 99999;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px; cursor: pointer;
+    }
+    .ev-photo-modal.hidden { display: none; }
+    .ev-photo-modal img {
+      max-width: 88vw; max-height: 72vh; border-radius: 10px;
+      border: 2px solid var(--accent); box-shadow: 0 0 40px rgba(251,145,56,0.4);
+      cursor: default;
+    }
+    .ev-photo-modal-bar {
+      display: flex; align-items: center; gap: 16px;
+      background: rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 18px;
+    }
+    .ev-photo-modal-info { color: var(--text-primary); font-size: 0.85rem; font-weight: 600; }
+    .ev-photo-modal-close {
+      background: var(--accent); color: #000; border: none;
+      padding: 7px 20px; border-radius: 6px; font-weight: 700; cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .ev-photo-modal-close:hover { opacity: 0.85; }
+    .ev-shot { cursor: pointer; transition: opacity 0.15s, border-color 0.15s; }
+    .ev-shot:hover { opacity: 0.75; border-color: var(--accent) !important; }
+
+    /* ======== МІНЕЗ-ҚҰЛЫҚ ПРОФАЙЛ ======== */
+    .fingerprint-section { padding: 14px 20px; border-top: 1px solid var(--border); }
+    .fp-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+    .fp-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .fp-label { font-size: 0.72rem; color: var(--text-secondary); }
+    .fp-bar-wrap { width: 70px; height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+    .fp-bar { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.5s ease; }
+
+    /* PDF badge */
+    .pdf-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,50,50,0.1); border: 1px solid rgba(255,50,50,0.25);
+      color: #ff7070; border-radius: 6px; padding: 4px 10px; font-size: 0.72rem;
+      font-weight: 700; cursor: pointer; transition: var(--transition);
+    }
+    .pdf-badge:hover { background: rgba(255,50,50,0.18); }
+
+    /* ======== МОБИЛЬДІ RESPONSIVE ======== */
+    @media (max-width: 768px) {
+      .exam-layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .exam-navbar {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 14px;
+        height: auto;
+        min-height: 56px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .exam-info {
+        flex-wrap: wrap;
+        gap: 6px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .exam-title {
+        font-size: 0.8rem;
+        white-space: normal;
+        line-height: 1.3;
+      }
+
+      .exam-status-bar {
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .timer { font-size: 1.3rem; }
+
+      .exam-content {
+        overflow-y: visible;
+        padding: 18px 16px;
+        order: 1;
+      }
+
+      .options-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .option {
+        padding: 16px 18px;
+        min-height: 52px;
+        font-size: 1rem;
+      }
+
+      .option-letter {
+        width: 34px; height: 34px;
+        font-size: 0.95rem;
+      }
+
+      .option-text { font-size: 1rem; }
+
+      .question-card {
+        padding: 22px 18px;
+        border-radius: 14px;
+      }
+
+      .question-num { font-size: 0.88rem; margin-bottom: 14px; }
+
+      .question-text { font-size: 1.1rem; line-height: 1.7; margin-bottom: 22px; }
+
+      .question-nav {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 16px 0;
+      }
+
+      .question-nav .btn { flex: 1; min-width: 120px; padding: 13px 18px; font-size: 0.92rem; }
+
+      .proctor-sidebar {
+        order: 2;
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+
+      .camera-container { height: 220px; }
+
+      .monitor-panel { padding: 16px; }
+
+      .monitor-item { font-size: 0.9rem; padding: 12px 0; }
+
+      .monitor-label { font-size: 0.9rem; }
+
+      .monitor-val { font-size: 0.88rem; }
+
+      .cheat-score-section { padding: 16px; }
+
+      .cheat-score-num { font-size: 2.2rem; }
+
+      .cheat-score-label { font-size: 0.82rem; }
+
+      .q-navigator { grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 16px; }
+
+      .q-nav-btn { font-size: 0.88rem; }
+
+      .permission-box { padding: 28px 20px; max-width: 95vw; }
+      .permission-box h2 { font-size: 1.3rem; }
+      .permission-box p  { font-size: 0.95rem; }
+      .permission-list li { font-size: 0.92rem; }
+
+      .warning-box { padding: 30px 22px; width: 94vw; }
+      .warning-title { font-size: 1.4rem; }
+      .warning-message { font-size: 1rem; }
+
+      .terminate-title { font-size: 1.6rem; }
+      .terminate-sub   { font-size: 1rem; }
+
+      .btn { padding: 12px 18px; font-size: 0.92rem; }
+
+      /* Баннер телефонды толық ені */
+      .phone-alert-banner { max-width: 94vw; padding: 14px 18px; }
+      .pa-title { font-size: 1.05rem; }
+      .pa-sub   { font-size: 0.85rem; }
+
+      .log-item { font-size: 0.82rem; }
+
+      .fp-label { font-size: 0.8rem; }
+    }
+
+    @media (max-width: 400px) {
+      .exam-title { display: none; }
+      .q-navigator { grid-template-columns: repeat(5, 1fr); }
+      .question-text { font-size: 1.05rem; }
+    }
   </style>
 </head>
 <body>
   <div class="grid-bg"></div>
+
+  <!-- ======== БЕТ АНЫҚТАЛМАДЫ — PERSISTENT OVERLAY (5с таймер) ======== -->
+  <div class="noface-overlay hidden" id="nofaceOverlay">
+    <span class="noface-icon">👤</span>
+    <div class="noface-title">Экранға оралыңыз!</div>
+    <div class="noface-msg">
+      Сіздің бетіңіз камерада көрінбейді.<br>
+      Дереу камера алдына оралыңыз — бұзушылық тіркеліп жатыр!
+    </div>
+    <div class="noface-countdown-wrap">
+      <div class="noface-countdown" id="nofaceCountdown">5</div>
+      <div class="noface-countdown-sub">секундтан кейін қауіп балы өседі</div>
+    </div>
+    <div class="noface-ring"></div>
+  </div>
+
+  <!-- ======== ТАБ ЕСКЕРТУІ — 3-УДАР ЖҮЙЕСІ ======== -->
+  <div class="tab-warning-overlay hidden" id="tabWarningOverlay">
+    <div class="tab-warning-box" id="tabWarningBox">
+      <div class="tab-strike-dots">
+        <div class="tab-dot" id="tabDot1"></div>
+        <div class="tab-dot" id="tabDot2"></div>
+        <div class="tab-dot" id="tabDot3"></div>
+      </div>
+      <span class="tab-warning-icon" id="tabWarningIcon">⚠️</span>
+      <div class="tab-warning-title" id="tabWarningTitle">Ережені бұздыңыз!</div>
+      <div class="tab-warning-msg" id="tabWarningMsg">Емтихан кезінде қойынды ауыстыруға болмайды!</div>
+      <div class="tab-warning-rule" id="tabWarningRule">🖥️ Ереже: Тек емтихан беті ашық болуы тиіс. Басқа сайттарға кіруге немесе терезені жасыруға болмайды.</div>
+      <button class="tab-warning-btn" id="tabWarningBtn" onclick="dismissTabWarning()">Түсіндім, емтиханды жалғастырамын</button>
+    </div>
+  </div>
+
+  <!-- ======== КӨЗ БАҒЫТЫ ТАЙМЕРІ ======== -->
+  <div class="gaze-timer-banner hidden" id="gazeTimerBanner">
+    <div class="gaze-timer-count" id="gazeTimerCount">0</div>
+    <div class="gaze-timer-text">
+      <div class="gaze-timer-title">Экранға қараңыз!</div>
+      <div class="gaze-timer-sub" id="gazeTimerSub">Көзіңіз экраннан алыс</div>
+    </div>
+  </div>
+
+  <!-- ======== ТЕЛЕФОН АНЫҚТАЛДЫ БАННЕР ======== -->
+  <div class="phone-alert-banner hidden" id="phoneAlertBanner">
+    <span class="pa-icon">📵</span>
+    <div class="pa-text">
+      <div class="pa-title">Телефон анықталды!</div>
+      <div class="pa-sub">Студент телефон қолдануда — тез жойыңыз!</div>
+    </div>
+    <div class="pa-pulse"></div>
+  </div>
+
+  <!-- ======== ТЕЛЕФОН БЛОК ОВЕРЛЕЙІ (мұғалім рұқсатын күту) ======== -->
+  <div class="phonelock-overlay hidden" id="phonelockOverlay">
+    <div class="phonelock-badge">🚨 ЕРЕЖЕБҰЗУШЫЛЫҚ</div>
+    <div class="phonelock-icon">📵</div>
+    <div class="phonelock-title">Телефон анықталды!</div>
+    <div class="phonelock-sub">
+      Студент сотка немесе телефон қолданып жатыр.<br>
+      Емтихан бұғатталды — мұғалімнің рұқсаты қажет.
+    </div>
+    <div class="phonelock-status">
+      <div class="phonelock-spinner"></div>
+      <span class="phonelock-status-text" id="phonelockStatusText">Мұғалімнің рұқсатын күтуде...</span>
+    </div>
+    <div class="phonelock-timer-info">
+      ⏱ Уақыт өтуде — мұғалім рұқсат бермесе емтихан автоматты аяқталады
+    </div>
+  </div>
+
+  <!-- ======== SOFT-LOCK OVERLAY ======== -->
+  <div class="softlock-overlay hidden" id="softlockOverlay">
+    <div class="softlock-box">
+      <span class="softlock-icon">🔒</span>
+      <div class="softlock-title">Тексеру жүргізілуде</div>
+      <div class="softlock-msg" id="softlockMsg">Күмәнді әрекет анықталды. ProctorAI тексеруді аяқтағанша күтіңіз.</div>
+      <div class="softlock-timer-wrap">
+        <div class="softlock-timer" id="softlockTimer">8</div>
+        <div class="softlock-sub">секунд</div>
+      </div>
+    </div>
+  </div>
 
   <!-- ======== ЕСКЕРТУ ОВЕРЛЕЙІ ======== -->
   <div class="warning-overlay hidden" id="warningOverlay">
@@ -353,6 +854,10 @@
         Түсіндім, емтиханды жалғастырамын
       </button>
       <div class="warning-countdown" id="warnCountdown"></div>
+      <div class="ai-explain-section" id="warnAiExplain" style="display:none;">
+        <div class="ai-explain-title">🤖 AI Түсіндірмесі</div>
+        <div class="ai-explain-text" id="warnAiExplainText"></div>
+      </div>
     </div>
   </div>
 
@@ -399,10 +904,15 @@
         </span>
       </div>
       <div class="exam-status-bar">
-        <div style="font-size:0.8rem;color:var(--text-muted);">Сұрақ <strong id="curQ" style="color:var(--text-primary);">7</strong> / 25</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">Сұрақ <strong id="curQ" style="color:var(--text-primary);">1</strong> / 15</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);" id="answeredCount">0 жауапталды</div>
         <div style="width:1px;height:20px;background:var(--border);"></div>
         <div class="timer" id="timer">01:12:45</div>
         <button onclick="submitExam()" class="btn btn-primary" style="font-size:0.82rem;">Емтиханды тапсыру</button>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Тақырыпты ауыстыру">
+          <span class="theme-icon-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+          <span class="theme-icon-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></span>
+        </button>
       </div>
     </div>
 
@@ -410,46 +920,16 @@
     <div class="exam-content">
       <div class="exam-progress-bar" id="progressBar"></div>
 
-      <div class="question-card fade-in">
-        <div class="question-num">7-сұрақ / 25 · Орташа · 4 ұпай</div>
-        <div class="question-text">
-          <em>n</em> түйіні бар теңдестірілген Екілік Іздеу Ағашында (BST) элементті іздеудің уақыттық күрделілігі қандай?
-        </div>
-        <div class="options-grid">
-          <div class="option" onclick="selectOption(this)">
-            <div class="option-letter">А</div>
-            <div class="option-text">O(n) — сызықтық уақыт</div>
-          </div>
-          <div class="option selected" onclick="selectOption(this)">
-            <div class="option-letter">Б</div>
-            <div class="option-text">O(log n) — логарифмдік уақыт</div>
-          </div>
-          <div class="option" onclick="selectOption(this)">
-            <div class="option-letter">В</div>
-            <div class="option-text">O(n log n) — сызықтық-логарифмдік уақыт</div>
-          </div>
-          <div class="option" onclick="selectOption(this)">
-            <div class="option-letter">Г</div>
-            <div class="option-text">O(1) — тұрақты уақыт</div>
-          </div>
-        </div>
-      </div>
+      <!-- Динамикалық сұрақ карточкасы -->
+      <div id="questionContainer"></div>
 
       <div class="question-nav">
         <button class="btn btn-ghost" onclick="navigate(-1)">← Алдыңғы</button>
-        <div style="font-size:0.82rem;color:var(--text-muted);">
-          <span style="color:var(--accent)">●</span> 6 жауапталды &nbsp;
-          <span style="color:var(--text-muted)">●</span> 18 қалды
+        <div style="font-size:0.82rem;color:var(--text-muted);" id="navStatus">
+          <span style="color:var(--accent)">●</span> 0 жауапталды &nbsp;
+          <span style="color:var(--text-muted)">●</span> 15 қалды
         </div>
         <button class="btn btn-primary" onclick="navigate(1)">Келесі →</button>
-      </div>
-
-      <div class="question-card" style="opacity:0.5;">
-        <div class="question-num">8-сұрақ / 25 · Қиын · 6 ұпай</div>
-        <div class="question-text">
-          Кадане алгоритмін пайдаланып бүтін сандар массивінде максималды қосындысы бар үзіліссіз ішмассивті табыңыз. Алгоритмнің ең жақсы уақыттық күрделілігі қандай?
-        </div>
-        <div style="color:var(--text-muted);font-size:0.85rem;font-style:italic;">Жауап беру үшін осы сұраққа өтіңіз.</div>
       </div>
     </div>
 
@@ -484,6 +964,9 @@
         <div class="camera-status-bar">
           <div class="cam-rec-label">
             <div class="rec-dot"></div> ЖАЗ · БАҚЫЛАУ
+          </div>
+          <div class="screen-rec-badge inactive" id="screenRecBadge" onclick="downloadScreenRecording()" title="Экран жазуын жүктеу">
+            <span>⏺</span><span id="screenRecStatus">REC</span>
           </div>
           <div class="cam-face-status loading" id="faceStatus">Күтілуде...</div>
         </div>
@@ -530,17 +1013,47 @@
         </div>
       </div>
 
-      <!-- ЖИ Адалдық Баллы -->
+      <!-- ИИ Адалдық Баллы + Риск Деңгейі -->
       <div class="cheat-score-section">
-        <div class="cheat-score-label">ЖИ Адалдық Баллы</div>
-        <div class="cheat-score-display">
-          <div class="cheat-score-num" id="cheatScore">4</div>
+        <div class="cheat-score-label">ИИ Қауіп Деңгейі</div>
+        <!-- Risk level 4-segment bar -->
+        <div class="risk-level-indicator">
+          <div class="risk-level-track">
+            <div class="risk-seg low active"     id="rsLow"></div>
+            <div class="risk-seg medium"          id="rsMed"></div>
+            <div class="risk-seg high"            id="rsHigh"></div>
+            <div class="risk-seg critical"        id="rsCrit"></div>
+          </div>
+          <div class="risk-level-label" id="riskLevelLabel">🟢 Төмен қауіп</div>
+        </div>
+        <div class="cheat-score-display" style="margin-top:10px;">
+          <div class="cheat-score-num" id="cheatScore">0</div>
           <div class="cheat-score-pct">%</div>
+          <div style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span id="pdfBtn" class="pdf-badge" style="display:none;" onclick="triggerPdfDownload()">📄 PDF</span>
+          </div>
         </div>
         <div class="progress-bar" style="margin-bottom:8px;">
-          <div class="progress-fill green" id="cheatBar" style="width:4%;"></div>
+          <div class="progress-fill green" id="cheatBar" style="width:0%;"></div>
         </div>
         <div class="cheat-score-desc" id="cheatDesc">✓ Төмен қауіп — мінез-құлық қалыпты</div>
+      </div>
+
+      <!-- Мінез-құлық профайлы -->
+      <div class="fingerprint-section" id="fpSection">
+        <div class="fp-title">Мінез-құлық профайлы</div>
+        <div class="fp-row">
+          <span class="fp-label">⌨️ Теру жылдамдығы</span>
+          <div class="fp-bar-wrap"><div class="fp-bar" id="fpTyping" style="width:50%;"></div></div>
+        </div>
+        <div class="fp-row">
+          <span class="fp-label">🖱️ Mouse белсенділігі</span>
+          <div class="fp-bar-wrap"><div class="fp-bar" id="fpMouse" style="width:50%;background:var(--accent-green);"></div></div>
+        </div>
+        <div class="fp-row">
+          <span class="fp-label">👁️ Көз тұрақтылығы</span>
+          <div class="fp-bar-wrap"><div class="fp-bar" id="fpGaze" style="width:100%;background:var(--accent-green);"></div></div>
+        </div>
       </div>
 
       <!-- Іс-шаралар журналы -->
@@ -557,6 +1070,15 @@
         </div>
       </div>
 
+      <!-- Дәлелдер журналы -->
+      <div class="evidence-section" id="evidenceSection" style="display:none;">
+        <div class="monitor-title" style="font-size:0.7rem;margin:12px 0 8px;padding:0;">
+          📸 Дәлелдер журналы
+          <span style="float:right;font-size:0.65rem;color:var(--text-muted);" id="evidenceCount">0 жазба</span>
+        </div>
+        <div id="evidenceList"></div>
+      </div>
+
       <!-- Сұрақтар картасы -->
       <div class="q-navigator" id="qNav"></div>
     </div>
@@ -564,7 +1086,7 @@
 
   <script>
   // ============================================================
-  // ЕСКЕРТУ ЖҮЙЕСІ — 3 ескертуден кейін емтихан тоқтатылады
+  // ADAPTIVE CHEAT ENGINE — CheatEngine + EvidenceCollector
   // ============================================================
   const WARNING_RULES = {
     NO_FACE:          { title: 'Бет анықталмады!',        msg: 'Камера алдынан кетпеңіз. Емтихан барысында бетіңіз камерада көрінуі тиіс.', rule: '📷 Ереже: Студент емтихан барысында камера алдынан кетпеуі керек.' },
@@ -582,58 +1104,154 @@
     VOICE_DETECTED:   { title: 'Бөгде дауыс анықталды!',  msg: 'Микрофонда күмәнді дыбыс тіркелді.',                                         rule: '🔇 Ереже: Емтихан кезінде тыныш болу керек.' },
   };
 
-  let warningCount    = 0;
-  let warningActive   = false;
-  let warnDismissTimer = null;
-  const violationHistory = [];
+  // ── CheatEngine initialization ────────────────────────────
+  let evidenceCollector = null;
+  let warningActive     = false;
+  let warnDismissTimer  = null;
+  let _softLockTimer    = null;
+  let phoneDetected     = false;
 
-  function triggerWarning(violationType) {
-    if (warningActive) return; // бір уақытта тек бір ескерту
-    warningCount++;
-    violationHistory.push(violationType);
+  function playBeepAlert(type) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const patterns = {
+        warning: [{ f: 880, t: 0,    d: 0.15 }, { f: 880, t: 0.25, d: 0.15 }],
+        face:    [{ f: 660, t: 0,    d: 0.12 }, { f: 880, t: 0.18, d: 0.12 }, { f: 1100, t: 0.36, d: 0.2 }],
+        phone:   [{ f: 1100, t: 0,   d: 0.1  }, { f: 1100, t: 0.15, d: 0.1 }, { f: 1100, t: 0.3,  d: 0.25 }],
+        multi:   [{ f: 660, t: 0,    d: 0.2, w: 'sawtooth' }, { f: 660, t: 0.35, d: 0.2, w: 'sawtooth' }]
+      };
+      for (const b of (patterns[type] || patterns.warning)) {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = b.f;
+        osc.type = b.w || 'sine';
+        gain.gain.setValueAtTime(0.75, ctx.currentTime + b.t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + b.t + b.d);
+        osc.start(ctx.currentTime + b.t);
+        osc.stop(ctx.currentTime + b.t + b.d + 0.01);
+      }
+    } catch (e) {}
+  }
 
-    const info = WARNING_RULES[violationType] || {
-      title:   'Ереже бұзылды!',
-      msg:     'Күмәнді әрекет анықталды.',
-      rule:    '⚠️ Ереже: Емтихан тәртібін сақтаңыз.'
-    };
+  function speakWarning(text) {
+    playBeepAlert('warning');
+  }
 
-    // Нүктелерді жаңарту
-    for (let i = 1; i <= 3; i++) {
-      const dot = document.getElementById('wDot' + i);
-      dot.classList.toggle('active', i <= warningCount);
+  const cheatEngine = new CheatEngine({
+    onRiskChange(score, level, explanation) {
+      updateRiskUI(score, level, explanation);
+      updateFingerprintBars();
+      if ((level === 'high' || level === 'critical') && evidenceCollector) {
+        const lastV = cheatEngine.violationHistory.at(-1);
+        if (lastV) {
+          const entry = evidenceCollector.record(lastV.type, score, level, explanation);
+          if (entry) addEvidenceEntry(entry);
+        }
+      }
+      if (evidenceCollector?.shouldMakePDF()) {
+        document.getElementById('pdfBtn').style.display = 'inline-flex';
+      }
+    },
+    onSoftLock(reason, count) {
+      const dur = Math.min(8 + (count - 1) * 2, 20);
+      showSoftLockOverlay(reason, dur);
+      addLog('🔒 Soft-lock: ' + reason, 'warn');
+      if (cheatEngine.riskScore >= 60) showRiskWarning();
+    },
+    onHardLock(explanation) {
+      terminateExamHard(explanation);
+    },
+    onTeacherAlert(score, explanation) {
+      showTeacherToast(score, explanation);
     }
+  });
 
-    document.getElementById('warnTitle').textContent   = `Ескерту ${warningCount}/3 — ${info.title}`;
+  // ── Risk UI ──────────────────────────────────────────────
+  function updateRiskUI(score, level, explanation) {
+    const colors = { low:'var(--accent-green)', medium:'var(--accent-yellow)', high:'#ff8c00', critical:'#ff3333' };
+    const descs  = {
+      low:      '✓ Төмен қауіп — мінез-құлық қалыпты',
+      medium:   '⚠ Орта қауіп — тексеру жүргізілуде',
+      high:     '🟠 Жоғары қауіп — мұғалімге хабарлама жіберілді',
+      critical: '🔴 Критикалық — емтихан тоқтатылады!'
+    };
+    const color = colors[level] || colors.low;
+    document.getElementById('cheatScore').textContent = score;
+    document.getElementById('cheatScore').style.color = color;
+    document.getElementById('cheatBar').style.width   = score + '%';
+    document.getElementById('cheatBar').className     = 'progress-fill ' + (level === 'low' ? 'green' : level === 'medium' ? 'blue' : 'red');
+    document.getElementById('cheatDesc').textContent  = descs[level] || descs.low;
+    document.getElementById('cheatDesc').style.color  = color;
+
+    const segs = ['rsLow','rsMed','rsHigh','rsCrit'];
+    const lvls = ['low','medium','high','critical'];
+    const idx  = lvls.indexOf(level);
+    segs.forEach((id, i) => document.getElementById(id)?.classList.toggle('active', i <= idx));
+
+    const meta = cheatEngine.levelMeta(level);
+    const labelEl = document.getElementById('riskLevelLabel');
+    if (labelEl) { labelEl.textContent = meta.label; labelEl.style.color = color; }
+  }
+
+  function updateFingerprintBars() {
+    const fp = cheatEngine.getFingerprint();
+    const tEl = document.getElementById('fpTyping');
+    const mEl = document.getElementById('fpMouse');
+    const gEl = document.getElementById('fpGaze');
+    if (tEl) tEl.style.width = fp.typingSpeed + '%';
+    if (mEl) mEl.style.width = Math.min(fp.mouseSpeed * 10, 100) + '%';
+    if (gEl) {
+      gEl.style.width = fp.gazeStability + '%';
+      gEl.style.background = fp.gazeStability > 70 ? 'var(--accent-green)' : fp.gazeStability > 40 ? 'var(--accent-yellow)' : '#ff5050';
+    }
+  }
+
+  // ── Soft-lock overlay ─────────────────────────────────────
+  function showSoftLockOverlay(reason, duration) {
+    if (cheatEngine.hardLocked) return;
+    const overlay = document.getElementById('softlockOverlay');
+    document.getElementById('softlockMsg').textContent = reason;
+    let t = duration;
+    document.getElementById('softlockTimer').textContent = t;
+    overlay.classList.remove('hidden');
+    if (_softLockTimer) clearInterval(_softLockTimer);
+    _softLockTimer = setInterval(() => {
+      t--;
+      document.getElementById('softlockTimer').textContent = t;
+      if (t <= 0) { clearInterval(_softLockTimer); _softLockTimer = null; overlay.classList.add('hidden'); }
+    }, 1000);
+  }
+
+  // ── Warning overlay (high risk, AI explanation) ───────────
+  function showRiskWarning() {
+    if (warningActive || cheatEngine.hardLocked) return;
+    warningActive = true;
+    const lastV  = cheatEngine.violationHistory.at(-1);
+    const info   = WARNING_RULES[lastV?.type] || { title:'Жоғары қауіп!', msg:'Күмәнді әрекет анықталды.', rule:'⚠️ Ереже: Емтихан тәртібін сақтаңыз.' };
+    const count  = Math.min(cheatEngine.softLockCount, 3);
+    for (let i = 1; i <= 3; i++) document.getElementById('wDot'+i)?.classList.toggle('active', i <= count);
+    document.getElementById('warnTitle').textContent   = `Ескерту ${count} — ${info.title}`;
     document.getElementById('warnMessage').textContent = info.msg;
     document.getElementById('warnRule').textContent    = info.rule;
+    document.getElementById('warnBtn').style.display   = 'block';
 
-    const btn = document.getElementById('warnBtn');
-    if (warningCount >= 3) {
-      btn.style.display = 'none';
-      document.getElementById('warnCountdown').textContent = '';
-    } else {
-      btn.style.display = 'block';
-    }
+    const explanation = cheatEngine.explainCurrent();
+    const aiSect = document.getElementById('warnAiExplain');
+    const aiText = document.getElementById('warnAiExplainText');
+    if (aiSect && aiText) { aiSect.style.display = ''; aiText.textContent = explanation; }
 
-    warningActive = true;
     document.getElementById('warningOverlay').classList.remove('hidden');
+    addLog(`🚨 Ескерту: ${info.title}`, 'warn');
 
-    addLog(`🚨 ЕСКЕРТУ ${warningCount}/3: ${info.title}`, 'warn');
-
-    if (warningCount >= 3) {
-      // 3-ші ескерту → 2 секунд соң терминация
-      setTimeout(terminateExam, 2000);
-    } else {
-      // Авто-жабу таймері (15 секунд)
-      let remaining = 15;
-      document.getElementById('warnCountdown').textContent = `Немесе ${remaining} секундтан кейін автоматты жабылады`;
-      warnDismissTimer = setInterval(() => {
-        remaining--;
-        document.getElementById('warnCountdown').textContent = `Немесе ${remaining} секундтан кейін автоматты жабылады`;
-        if (remaining <= 0) dismissWarning();
-      }, 1000);
-    }
+    let remaining = 15;
+    document.getElementById('warnCountdown').textContent = `${remaining} секундтан кейін автоматты жабылады`;
+    if (warnDismissTimer) clearInterval(warnDismissTimer);
+    warnDismissTimer = setInterval(() => {
+      remaining--;
+      const el = document.getElementById('warnCountdown');
+      if (el) el.textContent = `${remaining} секундтан кейін автоматты жабылады`;
+      if (remaining <= 0) dismissWarning();
+    }, 1000);
   }
 
   function dismissWarning() {
@@ -642,46 +1260,198 @@
     warningActive = false;
   }
 
-  function terminateExam() {
-    // Ескерту оверлейін жабу
+  // ── Send violation to teacher for review (localStorage cross-tab) ─────
+  let _teacherDecisionPoll = null;
+
+  async function sendViolationToTeacher(type, score, level, description) {
+    const user = Auth.user();
+    const violationId = 'vio_' + Date.now();
+
+    const data = {
+      id: violationId,
+      sessionId: currentSessionId || 0,
+      studentName: user?.fullName || 'Студент',
+      studentGroup: user?.group || 'Топ белгісіз',
+      violationType: type,
+      riskScore: score,
+      riskLevel: level,
+      description: description,
+      timestamp: new Date().toISOString(),
+      screenshots: [],
+      videoBase64: null,
+      status: 'pending'
+    };
+
+    if (evidenceCollector) {
+      const recent = evidenceCollector.getTimeline().slice(-4);
+      data.screenshots = recent.map(e => e.screenshot).filter(Boolean);
+      const clip = evidenceCollector.clip();
+      if (clip && clip.size > 0 && clip.size < 1500000) {
+        await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onloadend = () => { data.videoBase64 = reader.result; resolve(); };
+          reader.onerror = () => resolve();
+          reader.readAsDataURL(clip);
+        });
+      }
+    }
+
+    const tryStore = (d) => {
+      localStorage.removeItem('proktorai_violation_review');
+      localStorage.removeItem('proktorai_violation_decision');
+      localStorage.setItem('proktorai_violation_review', JSON.stringify(d));
+    };
+    try { tryStore(data); }
+    catch(e) {
+      data.videoBase64 = null;
+      try { tryStore(data); }
+      catch(e2) {
+        data.screenshots = data.screenshots.slice(0, 1);
+        try { tryStore(data); } catch {}
+      }
+    }
+
+    document.getElementById('phonelockStatusText').textContent = 'Мұғалімнің шешімін күтуде...';
+    document.getElementById('phonelockOverlay').classList.remove('hidden');
+
+    if (_teacherDecisionPoll) clearInterval(_teacherDecisionPoll);
+    _teacherDecisionPoll = setInterval(() => {
+      const decStr = localStorage.getItem('proktorai_violation_decision');
+      if (!decStr) return;
+      let dec;
+      try { dec = JSON.parse(decStr); } catch { return; }
+      if (dec.violationId !== violationId) return;
+      clearInterval(_teacherDecisionPoll); _teacherDecisionPoll = null;
+      try { localStorage.removeItem('proktorai_violation_review'); localStorage.removeItem('proktorai_violation_decision'); } catch {}
+      if (dec.decision === 'allow') {
+        _phoneLocked = false; _nofaceAlertSent = false;
+        document.getElementById('phonelockOverlay').classList.add('hidden');
+        addLog('✅ Мұғалім рұқсат берді — емтихан жалғасады', 'ok');
+      } else {
+        terminateExamHard('Мұғалім емтиханды тоқтатты' + (dec.reason ? ': ' + dec.reason : ''));
+      }
+    }, 1500);
+
+    // Auto-terminate after 5 minutes if no teacher response
+    setTimeout(() => {
+      if (!_teacherDecisionPoll) return;
+      clearInterval(_teacherDecisionPoll); _teacherDecisionPoll = null;
+      terminateExamHard('Мұғалім 5 минут ішінде жауап бермеді — емтихан автоматты тоқтатылды');
+    }, 300000);
+  }
+
+  // ── Teacher alert toast ───────────────────────────────────
+  function showTeacherToast(score, explanation) {
+    addLog('📡 Мұғалімге хабарлама жіберілді (' + score + '%)', 'warn');
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99998;background:linear-gradient(135deg,rgba(255,100,0,0.97),rgba(200,40,0,0.97));color:#fff;border-radius:12px;padding:16px 20px;max-width:320px;font-size:0.82rem;box-shadow:0 8px 32px rgba(255,80,0,0.5);animation:overlayFadeIn 0.3s ease;border-left:4px solid #ff6600;transition:opacity 0.5s ease;';
+    toast.innerHTML = `<div style="font-weight:700;margin-bottom:6px;font-size:0.9rem;">📡 Мұғалімге хабарлама жіберілді</div><div style="opacity:0.9;margin-bottom:4px;">Қауіп деңгейі: <strong>${score}%</strong></div><div style="opacity:0.75;font-size:0.75rem;">Нақты уақыттағы бақылау іске қосылды</div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; }, 4500);
+    setTimeout(() => toast.remove(), 5000);
+  }
+
+  // ── Hard lock / terminate ─────────────────────────────────
+  function terminateExamHard(explanation) {
     document.getElementById('warningOverlay').classList.add('hidden');
+    document.getElementById('softlockOverlay').classList.add('hidden');
+    document.getElementById('nofaceOverlay').classList.add('hidden');
+    document.getElementById('phoneAlertBanner').classList.add('hidden');
+    document.getElementById('phonelockOverlay').classList.add('hidden');
+    document.getElementById('tabWarningOverlay').classList.add('hidden');
+    document.getElementById('gazeTimerBanner').classList.add('hidden');
+    if (_phonePollInterval) { clearInterval(_phonePollInterval); _phonePollInterval = null; }
+    if (cameraStream)       cameraStream.getTracks().forEach(t => t.stop());
+    if (faceDetectInterval) clearInterval(faceDetectInterval);
+    if (aiFrameInterval)    clearInterval(aiFrameInterval);
+    if (micAnimFrame)       cancelAnimationFrame(micAnimFrame);
+    if (_softLockTimer)     clearInterval(_softLockTimer);
+    stopNofaceCountdown(); stopGazeTimer(); stopScreenRecording();
 
-    // Барлық ресурстарды тоқтату
-    if (cameraStream)        cameraStream.getTracks().forEach(t => t.stop());
-    if (faceDetectInterval)  clearInterval(faceDetectInterval);
-    if (aiFrameInterval)     clearInterval(aiFrameInterval);
-    if (micAnimFrame)        cancelAnimationFrame(micAnimFrame);
-
-    // Терминация экранын көрсету
-    const overlay = document.getElementById('terminateOverlay');
-    const list    = document.getElementById('terminateViolations');
+    const list = document.getElementById('terminateViolations');
     list.innerHTML = '';
-    violationHistory.forEach((v, i) => {
-      const info = WARNING_RULES[v] || { title: v };
+    cheatEngine.violationHistory.slice(-3).forEach((v, i) => {
+      const info = WARNING_RULES[v.type] || { title: v.type };
       const li = document.createElement('li');
-      li.innerHTML = `<span>⚠</span> <strong>${i+1}-ескерту:</strong> ${info.title}`;
+      li.innerHTML = `<span>⚠</span> <strong>${i+1}:</strong> ${info.title}`;
       list.appendChild(li);
     });
-    overlay.classList.remove('hidden');
+    if (explanation) {
+      const li = document.createElement('li');
+      li.style.cssText = 'color:var(--text-muted);font-size:0.75rem;white-space:pre-line;flex-direction:column;align-items:flex-start;gap:4px;';
+      li.innerHTML = `<span style="color:var(--accent);font-size:0.8rem;">🤖 AI Түсіндірмесі:</span><br>${explanation}`;
+      list.appendChild(li);
+    }
+    document.getElementById('terminateOverlay').classList.remove('hidden');
 
-    // 5 секундтан кейін бетке қайтару
+    AuditAPI.log('EXAM_TERMINATED', currentSessionId, 'Емтихан жүйе арқылы тоқтатылды. ' + new Date().toISOString());
+
+    if (evidenceCollector && evidenceCollector.count() > 0) {
+      const user = Auth.user();
+      evidenceCollector.downloadPDF(
+        { name: user?.fullName || 'Студент', email: user?.email || '-', id: String(user?.userId || '-') },
+        { title: document.querySelector('.exam-title')?.textContent?.trim() || 'Емтихан', date: new Date().toLocaleDateString('ru-RU'), startTime: new Date().toLocaleTimeString('kk-KZ') }
+      ).catch(() => {});
+    }
+
     let sec = 5;
     const redirectEl = document.getElementById('terminateRedirect');
     const countdown = setInterval(() => {
       sec--;
-      redirectEl.textContent = `${sec} секундтан кейін бетке қайтарыласыз...`;
+      if (redirectEl) redirectEl.textContent = `${sec} секундтан кейін бетке қайтарыласыз...`;
       if (sec <= 0) {
         clearInterval(countdown);
-        if (currentSessionId) {
-          SessionAPI.finish(currentSessionId).catch(() => {});
-        }
+        if (currentSessionId) SessionAPI.finish(currentSessionId).catch(() => {});
         window.location.href = 'student-dashboard.html';
       }
     }, 1000);
   }
 
+  // ── Evidence UI ───────────────────────────────────────────
+  function addEvidenceEntry(entry) {
+    const section = document.getElementById('evidenceSection');
+    const list    = document.getElementById('evidenceList');
+    const count   = document.getElementById('evidenceCount');
+    section.style.display = '';
+    if (count) count.textContent = evidenceCollector.count() + ' жазба';
+    const item = document.createElement('div');
+    item.className = 'evidence-item';
+    const shotHtml = entry.screenshot
+      ? `<img class="ev-shot" src="${entry.screenshot}" alt="ss" title="Үлкейту үшін басыңыз">`
+      : `<div class="ev-shot-placeholder">📸</div>`;
+    item.innerHTML = `${shotHtml}<div class="ev-body"><div class="ev-type">${entry.violationType}</div><div class="ev-meta">${entry.timeStr} · ${entry.riskScore}%</div></div><span class="ev-badge ${entry.riskLevel}">${entry.riskLevel.toUpperCase()}</span>`;
+    if (entry.screenshot) {
+      const img = item.querySelector('.ev-shot');
+      if (img) img.addEventListener('click', () => openEvidencePhoto(entry.screenshot, entry.violationType + '  ·  ' + entry.timeStr + '  ·  ' + entry.riskScore + '%'));
+    }
+    list.insertBefore(item, list.firstChild);
+    while (list.children.length > 5) list.lastChild.remove();
+  }
+
+  function openEvidencePhoto(src, info) {
+    document.getElementById('evPhotoImg').src = src;
+    document.getElementById('evPhotoInfo').textContent = info || '';
+    document.getElementById('evPhotoModal').classList.remove('hidden');
+  }
+
+  function closeEvidenceModal(e) {
+    if (e) e.stopPropagation();
+    document.getElementById('evPhotoModal').classList.add('hidden');
+    document.getElementById('evPhotoImg').src = '';
+  }
+
+  async function triggerPdfDownload() {
+    if (!evidenceCollector) return;
+    const user = Auth.user();
+    const ok = await evidenceCollector.downloadPDF(
+      { name: user?.fullName || 'Студент', email: user?.email || '-', id: String(user?.userId || '-') },
+      { title: document.querySelector('.exam-title')?.textContent?.trim() || 'Емтихан', date: new Date().toLocaleDateString('ru-RU'), startTime: new Date().toLocaleTimeString('kk-KZ') }
+    );
+    if (!ok) alert('jsPDF жүктелмеген');
+  }
+
   // ============================================================
-  // НАҚТЫ УАҚЫТТАҒЫ КАМЕРА — WebRTC getUserMedia
+  // CAMERA — WebRTC getUserMedia
   // ============================================================
   let cameraStream = null;
   let faceDetectInterval = null;
@@ -696,12 +1466,10 @@
 
   async function startCamera() {
     try {
-      const constraints = {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
         audio: true
-      };
-      cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-
+      });
       const video = document.getElementById('realCamera');
       video.srcObject = cameraStream;
       video.onloadedmetadata = () => {
@@ -713,8 +1481,12 @@
         document.getElementById('faceStatus').textContent = 'Бет іздеуде...';
         document.getElementById('faceStatus').className = 'cam-face-status loading';
         addLog('Камера сәтті қосылды', 'ok');
+        evidenceCollector = new EvidenceCollector(video);
+        evidenceCollector.startBuffer(cameraStream);
         startFaceSimulation();
         startMicMonitor();
+        startScreenRecording(cameraStream);
+        if (!aiFrameInterval) aiFrameInterval = setInterval(sendFrameToAI, 3000);
       };
     } catch (err) {
       handleCameraError(err);
@@ -740,59 +1512,23 @@
     addLog('⚠ ' + msg, 'warn');
   }
 
-  // Бет анықтауды симуляциялау (нақты ML Face Detection қосу үшін TensorFlow.js қажет)
-  // Бұл жерде геометриялық орналасу арқылы бет рамкасын өлшеміне сай көрсетеміз
-  let faceVisible = false;
   let faceAwayCount = 0;
 
   function startFaceSimulation() {
-    const video = document.getElementById('realCamera');
-    const faceBox = document.getElementById('faceBox');
+    const video     = document.getElementById('realCamera');
+    const faceBox   = document.getElementById('faceBox');
     const container = video.parentElement;
 
+    // Тек faceBox позициясын жаңартамыз; бет статусы AI нәтижесінен жаңарады
     faceDetectInterval = setInterval(() => {
-      if (!cameraStream || !cameraStream.active) return;
-
-      const vTrack = cameraStream.getVideoTracks()[0];
-      const settings = vTrack ? vTrack.getSettings() : {};
-      const vw = container.offsetWidth;
-      const vh = container.offsetHeight;
-
-      // Камера ағыны бар — бетті ортада көрсетеміз
-      const bw = Math.round(vw * 0.38);
-      const bh = Math.round(bw * 1.15);
-      const bx = Math.round((vw - bw) / 2);
-      const by = Math.round((vh - bh) / 2) - 10;
-
+      if (!cameraStream?.active) return;
+      const vw = container.offsetWidth, vh = container.offsetHeight;
+      const bw = Math.round(vw * 0.38), bh = Math.round(bw * 1.15);
       faceBox.style.width  = bw + 'px';
       faceBox.style.height = bh + 'px';
-      faceBox.style.left   = bx + 'px';
-      faceBox.style.top    = by + 'px';
-      faceBox.classList.add('visible');
-
-      // Кездейсоқ «бет жоқ» симуляциясы (5% ықтималдық)
-      if (Math.random() < 0.05) {
-        faceBox.classList.remove('visible');
-        document.getElementById('faceStatus').textContent = '⚠ Бет табылмады!';
-        document.getElementById('faceStatus').className = 'cam-face-status bad';
-        faceAwayCount++;
-        if (faceAwayCount > 3) {
-          updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5 + faceAwayCount * 4);
-          addLog('⚠ Бет экраннан аулақтап кетті!', 'warn');
-          triggerWarning('NO_FACE');
-          faceAwayCount = 0;
-        }
-      } else {
-        faceBox.classList.add('visible');
-        document.getElementById('faceStatus').textContent = '✓ Бет анықталды';
-        document.getElementById('faceStatus').className = 'cam-face-status ok';
-      }
+      faceBox.style.left   = Math.round((vw - bw) / 2) + 'px';
+      faceBox.style.top    = (Math.round((vh - bh) / 2) - 10) + 'px';
     }, 1000);
-
-    setTimeout(() => {
-      document.getElementById('faceStatus').textContent = '✓ Бет анықталды';
-      document.getElementById('faceStatus').className = 'cam-face-status ok';
-    }, 1500);
   }
 
   // Микрофон деңгейін визуализациялау
@@ -821,9 +1557,16 @@
         if (avg > 50) {
           document.getElementById('eyeVal').textContent = 'Дыбыс бар!';
           document.getElementById('eyeVal').style.color = 'var(--accent-yellow)';
+          _highAudioFrames = (_highAudioFrames || 0) + 1;
+          if (_highAudioFrames >= 5) {
+            cheatEngine.addEvent('VOICE_DETECTED');
+            addLog('🔊 Дыбыс анықталды!', 'warn');
+            _highAudioFrames = 0;
+          }
         } else {
           document.getElementById('eyeVal').textContent = 'Белсенді';
           document.getElementById('eyeVal').style.color = 'var(--accent-green)';
+          _highAudioFrames = Math.max(0, (_highAudioFrames || 0) - 1);
         }
       }
       drawMic();
@@ -832,31 +1575,164 @@
     }
   }
 
-  // Камера бар-жоғын тексеру
-  async function checkCameraAvailability() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      document.getElementById('permModal').classList.remove('hidden');
-      document.getElementById('camLoadMsg').textContent = '⚠ Браузер камераны қолдамайды';
-      return;
+  let _highAudioFrames = 0;
+
+  // ── Бет анықталмады дауыстық алерт ──────────────────────────
+  let _lastFaceSpeechTime = 0;
+
+  function speakFaceAlert() {
+    const now = Date.now();
+    if (now - _lastFaceSpeechTime < 10000) return;
+    _lastFaceSpeechTime = now;
+    playBeepAlert('face');
+  }
+
+  // ── Телефон дауыстық алерт (Speech Synthesis) ────────────────
+  let _lastPhoneSpeechTime = 0;
+  let _phoneAlertTimeout   = null;
+
+  function speakPhoneAlert() {
+    const now = Date.now();
+    if (now - _lastPhoneSpeechTime < 8000) return;
+    _lastPhoneSpeechTime = now;
+    playBeepAlert('phone');
+  }
+
+  function showPhoneAlertBanner() {
+    const banner = document.getElementById('phoneAlertBanner');
+    banner.classList.remove('hidden');
+    if (_phoneAlertTimeout) clearTimeout(_phoneAlertTimeout);
+    _phoneAlertTimeout = setTimeout(() => banner.classList.add('hidden'), 5000);
+  }
+
+  // ── Телефон анықталды → емтиханды блоктау ───────────────────
+  let _phoneLocked       = false;
+  let _phonePollInterval = null;
+
+  function triggerPhoneLock() {
+    if (_phoneLocked) return;
+    _phoneLocked = true;
+    _lastPhoneSpeechTime = 0;
+    playBeepAlert('phone');
+    showPhoneAlertBanner();
+    addLog('🚨 ТЕЛЕФОН АНЫҚТАЛДЫ — Мұғалімге жіберілуде...', 'warn');
+    AuditAPI.log('PHONE_DETECTED', currentSessionId, 'Телефон анықталды. ' + new Date().toISOString());
+    if (evidenceCollector) {
+      const entry = evidenceCollector.record('PHONE_DETECTED', 95, 'critical', 'Телефон анықталды');
+      if (entry) addEvidenceEntry(entry);
     }
-    // Автоматты рұқсат сұрауды бастаймыз
+    sendViolationToTeacher('PHONE_DETECTED', 95, 'critical', 'Телефон немесе сотка анықталды — немедленно тоқтату');
+  }
+
+  function unlockFromPhoneLock() {
+    _phoneLocked = false;
+    if (_phonePollInterval) { clearInterval(_phonePollInterval); _phonePollInterval = null; }
+    document.getElementById('phonelockOverlay').classList.add('hidden');
+    document.getElementById('phonelockStatusText').textContent = 'Мұғалімнің рұқсатын күтуде...';
+    addLog('✅ Мұғалім рұқсат берді — емтихан жалғасады', 'ok');
+  }
+
+  async function checkCameraAvailability() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      document.getElementById('camLoadMsg').textContent = '⚠ Браузер камераны қолдамайды';
+    }
     document.getElementById('permModal').classList.remove('hidden');
   }
 
   // ============================================================
-  // ҚОЙЫНДЫ АУЫСТЫРУ МЕН КӨШІРУ/ҚОЮ АНЫҚТАУЫ
+  // TAB SWITCH — 3-УДАР ЖҮЙЕСІ
   // ============================================================
   let cheatTabCount = 0, cheatPasteCount = 0;
+  let tabStrikeCount = 0;
+  let _tabWarningActive = false;
+
+  const TAB_STRIKE_MESSAGES = [
+    {
+      title: 'Ережені бұздыңыз! (1/3)',
+      msg:   'Емтихан кезінде қойынды ауыстыруға болмайды!',
+      rule:  '🖥️ Ереже: Тек емтихан беті ашық болуы тиіс. Қайталанса емтихан тоқтатылады.',
+      icon:  '⚠️', danger: false
+    },
+    {
+      title: 'Сіз ережені қайта бұздыңыз! (2/3)',
+      msg:   'Сіздің әрекетіңіз тіркелді. Тағы бір рет бұзылса — емтихан автоматты жабылады!',
+      rule:  '🚨 СОҢҒЫ ЕСКЕРТУ: 3-рет анықталса емтихан тоқтатылып, оқытушыға есеп жіберіледі.',
+      icon:  '🚨', danger: true
+    }
+  ];
+
+  function showTabWarning(strike) {
+    if (cheatEngine.hardLocked) return;
+    _tabWarningActive = true;
+    const info = TAB_STRIKE_MESSAGES[strike - 1];
+    const box  = document.getElementById('tabWarningBox');
+    box.className = 'tab-warning-box' + (info.danger ? ' danger' : '');
+    document.getElementById('tabWarningIcon').textContent  = info.icon;
+    document.getElementById('tabWarningTitle').textContent = info.title;
+    document.getElementById('tabWarningMsg').textContent   = info.msg;
+    document.getElementById('tabWarningRule').textContent  = info.rule;
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById('tabDot' + i);
+      dot.className = 'tab-dot' + (info.danger ? ' danger' : '') + (i <= strike ? ' active' : '');
+    }
+    document.getElementById('tabWarningOverlay').classList.remove('hidden');
+    speakWarning(info.msg);
+    if (info.danger) speakWarning('Соңғы ескерту. Тағы бір рет бұзылса — емтихан тоқтатылады!');
+    addLog('🖥️ Қойынды ескертуі ' + strike + '/3', 'warn');
+    if (evidenceCollector) {
+      const entry = evidenceCollector.record('TAB_SWITCH_' + strike, cheatEngine.riskScore, strike >= 2 ? 'high' : 'medium', 'Браузер қойындысы ауыстырылды ' + strike + '-рет');
+      if (entry) addEvidenceEntry(entry);
+    }
+    // Send screenshot to teacher
+    sendTabSwitchAlert(strike);
+  }
+
+  function dismissTabWarning() {
+    document.getElementById('tabWarningOverlay').classList.add('hidden');
+    _tabWarningActive = false;
+  }
+
+  function terminateForTabSwitch() {
+    document.getElementById('tabWarningOverlay').classList.add('hidden');
+    if (evidenceCollector) {
+      evidenceCollector.record('TAB_SWITCH_TERMINATE', 100, 'critical', 'Емтихан 3 қойынды ауыстырудан кейін тоқтатылды');
+    }
+    // Override terminate overlay message
+    const overlay = document.getElementById('terminateOverlay');
+    const title = overlay.querySelector('.terminate-title');
+    const sub   = overlay.querySelector('.terminate-sub');
+    if (title) title.textContent = 'Сіз емтихан ережесін бұздыңыз!';
+    if (sub)   sub.textContent   = 'Сіз 3 рет браузер қойындысын ауыстырдыңыз. Емтихан автоматты түрде тоқтатылды. Оқытушыға скриншот пен есеп жіберілді.';
+    cheatEngine.forceHardLock('TAB_SWITCH × 3 — автоматты тоқтату');
+  }
+
+  function sendTabSwitchAlert(strike) {
+    if (!currentSessionId) return;
+    const ts = new Date().toISOString();
+    SessionAPI.addViolation({
+      sessionId: currentSessionId,
+      type:      'TAB_SWITCH',
+      score:     strike * 8,
+      details:   JSON.stringify({ strike, timestamp: ts })
+    }).catch(() => {});
+    AuditAPI.log('TAB_SWITCH_' + strike, currentSessionId, `Қойынды ауыстыру ${strike}/3 · ${ts}`);
+  }
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      tabStrikeCount++;
       cheatTabCount++;
       const el = document.getElementById('tabCount');
-      el.textContent = cheatTabCount;
-      el.style.color = cheatTabCount > 2 ? '#ff5050' : 'var(--accent-yellow)';
-      addLog('⚠ Қойынды ауыстыру анықталды!', 'warn');
-      updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
-      triggerWarning('TAB_SWITCH');
+      if (el) { el.textContent = cheatTabCount; el.style.color = cheatTabCount > 2 ? '#ff5050' : 'var(--accent-yellow)'; }
+      cheatEngine.addEvent('TAB_SWITCH', { count: cheatTabCount });
+
+      if (tabStrikeCount === 1) {
+        showTabWarning(1);
+      } else if (tabStrikeCount === 2) {
+        showTabWarning(2);
+      } else if (tabStrikeCount >= 3) {
+        terminateForTabSwitch();
+      }
     }
   });
 
@@ -866,8 +1742,7 @@
     document.getElementById('pasteCount').textContent = cheatPasteCount;
     document.getElementById('pasteCount').style.color = 'var(--accent-yellow)';
     addLog('⚠ Ctrl+C көшіру анықталды!', 'warn');
-    updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
-    triggerWarning('COPY_PASTE');
+    cheatEngine.addEvent('COPY_PASTE', { action: 'copy' });
   });
 
   document.addEventListener('paste', (e) => {
@@ -876,8 +1751,7 @@
     document.getElementById('pasteCount').textContent = cheatPasteCount;
     document.getElementById('pasteCount').style.color = '#ff5050';
     addLog('🚨 Ctrl+V қою анықталды!', 'warn');
-    updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
-    triggerWarning('COPY_PASTE');
+    cheatEngine.addEvent('COPY_PASTE', { action: 'paste' });
   });
 
   document.addEventListener('keydown', (e) => {
@@ -887,25 +1761,166 @@
     }
   });
 
-  // Алдау баллын жаңарту
-  function updateCheatScore(score) {
-    score = Math.min(100, score);
-    document.getElementById('cheatScore').textContent = score;
-    document.getElementById('cheatBar').style.width = score + '%';
-    const bar  = document.getElementById('cheatBar');
-    const desc = document.getElementById('cheatDesc');
-    const num  = document.getElementById('cheatScore');
-    if (score < 20) {
-      bar.className = 'progress-fill green'; num.style.color = 'var(--accent-green)';
-      desc.textContent = '✓ Төмен қауіп — мінез-құлық қалыпты'; desc.style.color = 'var(--accent-green)';
-    } else if (score < 50) {
-      bar.className = 'progress-fill blue'; num.style.color = 'var(--accent-yellow)';
-      desc.textContent = '⚠ Орташа қауіп — тексеру ұсынылады'; desc.style.color = 'var(--accent-yellow)';
-    } else {
-      bar.className = 'progress-fill red'; num.style.color = '#ff5050';
-      desc.textContent = '🚨 Жоғары қауіп — оқытушыға хабарлама жіберілді!'; desc.style.color = '#ff5050';
+  // ============================================================
+  // КӨЗ БАҒЫТЫ ТАЙМЕРІ (5–10 секунд ескерту)
+  // ============================================================
+  let _gazeAwayStart   = 0;
+  let _gazeAwayTimer   = null;
+  let _gazeAlertCount  = 0;
+  let _gazeTimerTick   = null;
+  let _lastGazeAlertTime = 0;
+
+  function startGazeTimer() {
+    if (_gazeAwayStart > 0) return; // Already counting
+    _gazeAwayStart = Date.now();
+    const banner   = document.getElementById('gazeTimerBanner');
+    banner.classList.remove('hidden');
+    let secs = 0;
+    if (_gazeTimerTick) clearInterval(_gazeTimerTick);
+    _gazeTimerTick = setInterval(() => {
+      secs = Math.round((Date.now() - _gazeAwayStart) / 1000);
+      const cEl = document.getElementById('gazeTimerCount');
+      const sEl = document.getElementById('gazeTimerSub');
+      if (cEl) cEl.textContent = secs;
+      if (sEl) {
+        if (secs < 5)       sEl.textContent = 'Экранға қараңыз!';
+        else if (secs < 10) sEl.textContent = '⚠ Ескерту жіберіледі!';
+        else                sEl.textContent = '🚨 Мұғалімге хабарланды!';
+      }
+      if (secs >= 5 && Date.now() - _lastGazeAlertTime > 15000) {
+        _lastGazeAlertTime = Date.now();
+        _gazeAlertCount++;
+        addLog('👁️ Көз ' + secs + 'с экраннан алыс (#' + _gazeAlertCount + ')', 'warn');
+        cheatEngine.addEvent('GAZE_AWAY', { durationSec: secs });
+        if (_gazeAlertCount >= 3) showTeacherToast(cheatEngine.riskScore, 'Студент ' + _gazeAlertCount + ' рет ' + secs + 'с экраннан тыс қарады');
+        if (secs >= 10) {
+          speakWarning('Экранға қараңыз');
+        }
+      }
+    }, 1000);
+  }
+
+  function stopGazeTimer() {
+    if (_gazeAwayStart === 0) return;
+    _gazeAwayStart = 0;
+    if (_gazeTimerTick) { clearInterval(_gazeTimerTick); _gazeTimerTick = null; }
+    document.getElementById('gazeTimerBanner').classList.add('hidden');
+    document.getElementById('gazeTimerCount').textContent = '0';
+  }
+
+  // ============================================================
+  // БЕТ АНЫҚТАЛМАДЫ — 5 СЕКУНД ТАЙМЕРІ
+  // ============================================================
+  let _nofaceSeconds   = 5;
+  let _nofaceCdTimer   = null;
+  let _nofaceAlertSent = false;
+
+  function startNofaceCountdown() {
+    _nofaceSeconds = 5;
+    _nofaceAlertSent = false;
+    const el = document.getElementById('nofaceCountdown');
+    if (el) el.textContent = _nofaceSeconds;
+    if (_nofaceCdTimer) return; // Already running
+    _nofaceCdTimer = setInterval(() => {
+      if (document.getElementById('nofaceOverlay').classList.contains('hidden')) {
+        stopNofaceCountdown(); return;
+      }
+      _nofaceSeconds = Math.max(0, _nofaceSeconds - 1);
+      const cdEl = document.getElementById('nofaceCountdown');
+      if (cdEl) cdEl.textContent = _nofaceSeconds;
+      if (_nofaceSeconds <= 0 && !_nofaceAlertSent) {
+        _nofaceAlertSent = true;
+        cheatEngine.addEvent('NO_FACE', { durationExceeded: true });
+        addLog('🚨 Бет 5+ секунд жоқ — Мұғалімге жіберілуде...', 'warn');
+        playBeepAlert('face');
+        if (evidenceCollector) {
+          const entry = evidenceCollector.record('NO_FACE', cheatEngine.riskScore, 'critical', 'Бет 5 секундтан артық камерада көрінбеді');
+          if (entry) addEvidenceEntry(entry);
+        }
+        sendViolationToTeacher('NO_FACE', cheatEngine.riskScore, 'critical', 'Студенттің беті 5 секундтан астам камерада көрінбеді');
+      }
+    }, 1000);
+  }
+
+  function stopNofaceCountdown() {
+    if (_nofaceCdTimer) { clearInterval(_nofaceCdTimer); _nofaceCdTimer = null; }
+    _nofaceSeconds = 5;
+    const cdEl = document.getElementById('nofaceCountdown');
+    if (cdEl) cdEl.textContent = 5;
+  }
+
+  // ============================================================
+  // БІРНЕШЕ АДАМ — ДАУЫСТЫҚ ЕСКЕРТУ
+  // ============================================================
+  let _lastMultiPersonSpeech = 0;
+  let _lastMultiPersonAlert  = 0;
+
+  function speakMultiPersonAlert() {
+    const now = Date.now();
+    if (now - _lastMultiPersonSpeech < 12000) return;
+    _lastMultiPersonSpeech = now;
+    playBeepAlert('multi');
+  }
+
+  // ============================================================
+  // ЭКРАН ЖАЗУ (SCREEN / CAMERA RECORDING)
+  // ============================================================
+  let _screenRecorder   = null;
+  let _screenChunks     = [];
+  let _screenRecording  = false;
+
+  function startScreenRecording(stream) {
+    if (!stream || !window.MediaRecorder || _screenRecording) return;
+    _screenChunks = [];
+    let mimeType = '';
+    for (const m of ['video/webm;codecs=vp8', 'video/webm', '']) {
+      if (!m || MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
+    }
+    try {
+      _screenRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+      _screenRecorder.ondataavailable = (e) => { if (e.data?.size > 0) _screenChunks.push(e.data); };
+      _screenRecorder.onstop = () => {
+        const blob = new Blob(_screenChunks, { type: 'video/webm' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'proktorai_recording_' + Date.now() + '.webm';
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      _screenRecorder.start(5000); // 5-second chunks
+      _screenRecording = true;
+      const badge = document.getElementById('screenRecBadge');
+      if (badge) { badge.className = 'screen-rec-badge'; badge.title = 'Жазу жүруде (жүктеу үшін басыңыз)'; }
+      const status = document.getElementById('screenRecStatus');
+      if (status) status.textContent = 'REC ●';
+      addLog('🎥 Экран жазу басталды', 'ok');
+    } catch (e) { console.warn('Screen recording failed:', e); }
+  }
+
+  function stopScreenRecording() {
+    if (_screenRecorder && _screenRecording) {
+      _screenRecorder.stop();
+      _screenRecording = false;
     }
   }
+
+  function downloadScreenRecording() {
+    if (_screenRecording) {
+      stopScreenRecording();
+    } else if (_screenChunks.length > 0) {
+      const blob = new Blob(_screenChunks, { type: 'video/webm' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'proktorai_recording_' + Date.now() + '.webm';
+      a.click(); URL.revokeObjectURL(url);
+    }
+  }
+
+  // Score decay every 10s
+  setInterval(() => { cheatEngine.decay(); }, 10000);
+  // Fingerprint bars update every 2s
+  setInterval(() => { updateFingerprintBars(); }, 2000);
 
   // Журналға жазу
   function addLog(msg, type) {
@@ -938,30 +1953,186 @@
   }, 1000);
 
   // ============================================================
+  // СҰРАҚТАР ДЕРЕКТЕРІ (15 сұрақ)
+  // ============================================================
+  const QUESTIONS = [
+    {
+      num: 1, diff: 'Оңай', pts: 3,
+      text: 'Байланыстырылған тізімде (Linked List) элементке қол жеткізудің уақыттық күрделілігі қандай?',
+      opts: ['O(1) — тұрақты', 'O(log n) — логарифмдік', 'O(n) — сызықтық', 'O(n²) — квадраттық'],
+      correct: 2
+    },
+    {
+      num: 2, diff: 'Орташа', pts: 4,
+      text: '<em>n</em> түйіні бар теңдестірілген Екілік Іздеу Ағашында (BST) элементті іздеудің уақыттық күрделілігі қандай?',
+      opts: ['O(n) — сызықтық уақыт', 'O(log n) — логарифмдік уақыт', 'O(n log n) — сызықтық-логарифмдік', 'O(1) — тұрақты уақыт'],
+      correct: 1
+    },
+    {
+      num: 3, diff: 'Оңай', pts: 3,
+      text: 'Stack деректер құрылымы қандай принцип бойынша жұмыс жасайды?',
+      opts: ['FIFO (First In First Out)', 'LIFO (Last In First Out)', 'LILO (Last In Last Out)', 'FILO (First In Last Out)'],
+      correct: 1
+    },
+    {
+      num: 4, diff: 'Орташа', pts: 4,
+      text: 'Merge Sort алгоритмінің орташа жағдайдағы уақыттық күрделілігі қандай?',
+      opts: ['O(n)', 'O(n log n)', 'O(n²)', 'O(log n)'],
+      correct: 1
+    },
+    {
+      num: 5, diff: 'Қиын', pts: 6,
+      text: 'Граф алгоритмдерінде BFS пен DFS айырмашылығы қандай? Ең қысқа жолды табу үшін қайсысы тиімдірек?',
+      opts: ['BFS — тереңдік, DFS — ені, DFS тиімдірек', 'BFS — ені, DFS — тереңдік, BFS тиімдірек', 'Екеуі де бірдей тиімді', 'BFS — ені, DFS — тереңдік, DFS тиімдірек'],
+      correct: 1
+    },
+    {
+      num: 6, diff: 'Оңай', pts: 3,
+      text: 'Хэш кестесінде (Hash Table) іздеудің орташа уақыттық күрделілігі қандай?',
+      opts: ['O(n)', 'O(log n)', 'O(1)', 'O(n log n)'],
+      correct: 2
+    },
+    {
+      num: 7, diff: 'Орташа', pts: 4,
+      text: 'Кадане алгоритмін пайдаланып максималды қосындылы ішмассивті табудың уақыттық күрделілігі?',
+      opts: ['O(n²)', 'O(n log n)', 'O(n)', 'O(log n)'],
+      correct: 2
+    },
+    {
+      num: 8, diff: 'Қиын', pts: 6,
+      text: 'Дейкстра алгоритмі не үшін қолданылады және оның уақыттық күрделілігі (min-heap пайдаланғанда)?',
+      opts: ['Минималды кесуші ағаш, O(V²)', 'Ең қысқа жол, O((V+E) log V)', 'Топологиялық сортировка, O(V+E)', 'Байланыстылықты тексеру, O(V)'],
+      correct: 1
+    },
+    {
+      num: 9, diff: 'Орташа', pts: 4,
+      text: 'Quick Sort алгоритмінің ең нашар жағдайдағы уақыттық күрделілігі қандай?',
+      opts: ['O(n log n)', 'O(n)', 'O(n²)', 'O(log n)'],
+      correct: 2
+    },
+    {
+      num: 10, diff: 'Оңай', pts: 3,
+      text: 'Бинарлы іздеудің жұмыс жасау шарты қандай?',
+      opts: ['Массив кездейсоқ реттелген болуы керек', 'Массив сорттелген болуы керек', 'Массив тек оң сандардан тұруы керек', 'Массив 100 элементтен аз болуы керек'],
+      correct: 1
+    },
+    {
+      num: 11, diff: 'Қиын', pts: 6,
+      text: 'Dynamic Programming (ДП) пен рекурсияның айырмашылығы не? ДП-ның басты артықшылығы?',
+      opts: ['ДП жылдамырақ, себебі параллель орындайды', 'ДП есептелген нәтижелерді сақтайды, қайта есептемейді (мемоизация)', 'ДП тек граф есептеріне қолданылады', 'ДП рекурсиядан баяуырақ жұмыс жасайды'],
+      correct: 1
+    },
+    {
+      num: 12, diff: 'Оңай', pts: 3,
+      text: 'Толық екілік ағашта (Complete Binary Tree) n-деңгейде максимум неше түйін болады?',
+      opts: ['n', '2n', '2^n', 'n²'],
+      correct: 2
+    },
+    {
+      num: 13, diff: 'Орташа', pts: 4,
+      text: 'Trie деректер құрылымы негізінен қандай операциялар үшін тиімді?',
+      opts: ['Сандарды сортировкалау', 'Жолдарды іздеу және префиксті тексеру', 'Граф бойынша ең қысқа жолды табу', 'Стек операцияларын орындау'],
+      correct: 1
+    },
+    {
+      num: 14, diff: 'Қиын', pts: 6,
+      text: 'Red-Black Tree мен AVL Tree арасындағы басты айырмашылық және қолдану жағдайлары?',
+      opts: ['Red-Black Tree — тезірек кірістіру, AVL — тезірек іздеу', 'AVL Tree — тезірек кірістіру, Red-Black — тезірек іздеу', 'Екеуі де бірдей, тек түс ережесі ерекшелейді', 'Red-Black Tree тек сызықтық деректер үшін'],
+      correct: 0
+    },
+    {
+      num: 15, diff: 'Орташа', pts: 4,
+      text: 'Floyd-Warshall алгоритмі не істейді және оның уақыттық күрделілігі қандай?',
+      opts: ['Минималды кесуші ағаш табады, O(E log V)', 'Барлық жұп төбелер арасындағы ең қысқа жолдарды табады, O(V³)', 'Тек бір бастапқы нүктеден ең қысқа жолды табады, O(V²)', 'Граф байланыстылығын тексереді, O(V+E)'],
+      correct: 1
+    }
+  ];
+
+  const TOTAL_Q = 15;
+  let currentQ  = 0; // 0-indexed
+  const answers = new Array(TOTAL_Q).fill(null);
+
+  // ============================================================
+  // СҰРАҚ РЕНДЕРИНГІ
+  // ============================================================
+  function renderQuestion(idx) {
+    const q = QUESTIONS[idx];
+    const letters = ['А','Б','В','Г'];
+    const container = document.getElementById('questionContainer');
+    container.innerHTML = `
+      <div class="question-card fade-in">
+        <div class="question-num">${q.num}-сұрақ / ${TOTAL_Q} · ${q.diff} · ${q.pts} ұпай</div>
+        <div class="question-text">${q.text}</div>
+        <div class="options-grid">
+          ${q.opts.map((opt, i) => `
+            <div class="option${answers[idx] === i ? ' selected' : ''}" onclick="selectOption(this, ${i})">
+              <div class="option-letter">${letters[i]}</div>
+              <div class="option-text">${opt}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    document.getElementById('curQ').textContent = idx + 1;
+    updateNavStatus();
+    updateProgressBar();
+  }
+
+  function updateNavStatus() {
+    const answered = answers.filter(a => a !== null).length;
+    const remaining = TOTAL_Q - answered;
+    const el = document.getElementById('navStatus');
+    if (el) el.innerHTML = `<span style="color:var(--accent)">●</span> ${answered} жауапталды &nbsp;<span style="color:var(--text-muted)">●</span> ${remaining} қалды`;
+    const ac = document.getElementById('answeredCount');
+    if (ac) ac.textContent = answered + ' жауапталды';
+  }
+
+  // ============================================================
   // СҰРАҚТАР ПРОГРЕСС-ЖОЛАҒЫ МЕН НАВИГАТОР
   // ============================================================
   const pb = document.getElementById('progressBar');
   const qn = document.getElementById('qNav');
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < TOTAL_Q; i++) {
     const d = document.createElement('div');
-    d.className = 'q-dot' + (i < 6 ? ' answered' : i === 6 ? ' current' : '');
+    d.id = 'dot' + i;
+    d.className = 'q-dot' + (i === 0 ? ' current' : '');
     pb.appendChild(d);
     const b = document.createElement('div');
-    b.className = 'q-nav-btn' + (i < 6 ? ' answered' : i === 6 ? ' current' : '');
+    b.id = 'qbtn' + i;
+    b.className = 'q-nav-btn' + (i === 0 ? ' current' : '');
     b.textContent = i + 1;
+    b.onclick = () => goToQuestion(i);
     qn.appendChild(b);
   }
 
-  function selectOption(el) {
+  function updateProgressBar() {
+    for (let i = 0; i < TOTAL_Q; i++) {
+      const d = document.getElementById('dot' + i);
+      const b = document.getElementById('qbtn' + i);
+      const isAnswered = answers[i] !== null;
+      const isCurrent  = i === currentQ;
+      if (d) d.className = 'q-dot' + (isCurrent ? ' current' : isAnswered ? ' answered' : '');
+      if (b) b.className = 'q-nav-btn' + (isCurrent ? ' current' : isAnswered ? ' answered' : '');
+    }
+  }
+
+  function selectOption(el, optIdx) {
+    answers[currentQ] = optIdx;
     document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
+    updateNavStatus();
+    updateProgressBar();
+  }
+
+  function goToQuestion(idx) {
+    currentQ = Math.max(0, Math.min(TOTAL_Q - 1, idx));
+    renderQuestion(currentQ);
   }
 
   function navigate(dir) {
-    let cur = parseInt(document.getElementById('curQ').textContent);
-    cur = Math.max(1, Math.min(25, cur + dir));
-    document.getElementById('curQ').textContent = cur;
+    goToQuestion(currentQ + dir);
   }
+
+  // Бастапқы сұрақты рендерлеу
+  renderQuestion(0);
 
   // Бет тоқтатылса камераны өшіру
   window.addEventListener('beforeunload', () => {
@@ -1015,50 +2186,71 @@
         const result = await AiAPI.analyzeFrame(currentSessionId, blob);
         if (!result) return;
 
-        // Cheat score жаңарту
-        if (result.cheat_score !== undefined) {
-          updateCheatScore(result.cheat_score);
-        }
-
-        // Бет статусы
+        // ── Бет статусы + persistent no-face lock ────────────
+        const nofaceOverlay = document.getElementById('nofaceOverlay');
         if (result.face_count === 0) {
           document.getElementById('faceStatus').textContent = 'Бет табылмады ❌';
           document.getElementById('faceStatus').className = 'cam-face-status bad';
+          if (!cheatEngine.hardLocked && !_phoneLocked) {
+            nofaceOverlay.classList.remove('hidden');
+            speakFaceAlert();
+            startNofaceCountdown();
+          }
+          stopGazeTimer();
         } else if (result.face_count > 1) {
           document.getElementById('faceStatus').textContent = 'Бірнеше адам! ⚠';
           document.getElementById('faceStatus').className = 'cam-face-status bad';
+          nofaceOverlay.classList.add('hidden');
+          stopNofaceCountdown();
         } else {
           document.getElementById('faceStatus').textContent = 'Бет анықталды ✓';
-          document.getElementById('faceStatus').className = 'cam-face-status good';
+          document.getElementById('faceStatus').className = 'cam-face-status ok';
+          nofaceOverlay.classList.add('hidden');
+          stopNofaceCountdown();
         }
 
-        // Violation-дарды backend-ке жіберу + ескерту шақыру
-        const HIGH_RISK = ['NO_FACE','MULTIPLE_FACES','MULTIPLE_PERSONS','PHONE_DETECTED','WINDOW_MINIMIZED','MULTIPLE_VOICES'];
+        // ── Көз бақылауы ─────────────────────────────────────
+        const isGazeAway = (result.violations || []).includes('GAZE_AWAY') ||
+                           (result.gaze_direction && result.gaze_direction !== 'center' && result.gaze_direction !== 'forward');
+        if (isGazeAway) {
+          startGazeTimer();
+          cheatEngine.updateGazeStability(false);
+        } else {
+          stopGazeTimer();
+          cheatEngine.updateGazeStability(true);
+        }
+
+        const weights = { NO_FACE:40, MULTIPLE_FACES:60, MULTIPLE_PERSONS:50, PERSON_ABSENT:40, GAZE_AWAY:20, HEAD_TURNED:25, PHONE_DETECTED:70, BOOK_DETECTED:40 };
         for (const v of (result.violations || [])) {
-          const weights = {
-            NO_FACE:40, MULTIPLE_FACES:60, MULTIPLE_PERSONS:50,
-            PERSON_ABSENT:40, GAZE_AWAY:20, HEAD_TURNED:25,
-            PHONE_DETECTED:70, BOOK_DETECTED:40
-          };
           await SessionAPI.addViolation({
             sessionId: currentSessionId,
             type:      v,
             score:     weights[v] || 10,
             details:   JSON.stringify({ gaze: result.gaze_direction, yaw: result.head_yaw })
           }).catch(() => {});
+          addLog('🤖 AI: ' + violationLabel(v), 'warn');
+          cheatEngine.addEvent(v, { source: 'ai', gaze: result.gaze_direction });
 
-          addLog('🚨 ' + violationLabel(v), 'warn');
-
-          // Жоғары қауіп болса немесе final_decision warn/flag/terminate болса — ескерту
-          if (HIGH_RISK.includes(v) || result.final_decision === 'flag' || result.final_decision === 'terminate') {
-            triggerWarning(v);
-            break; // бір уақытта тек бір violation үшін ескерту
+          // Телефон анықталса — лезде блоктау + дауыс + мұғалімге ескерту
+          if (v === 'PHONE_DETECTED') {
+            triggerPhoneLock();
+          }
+          // Бірнеше адам — дауыстық ескерту + мұғалімге alert
+          if (v === 'MULTIPLE_PERSONS' || v === 'MULTIPLE_FACES') {
+            const now = Date.now();
+            speakMultiPersonAlert();
+            if (now - _lastMultiPersonAlert > 20000) {
+              _lastMultiPersonAlert = now;
+              showTeacherToast(cheatEngine.riskScore, 'Студент жанында бөгде адам анықталды! Камера: ' + v);
+              if (evidenceCollector) {
+                const entry = evidenceCollector.record(v, cheatEngine.riskScore, 'high', 'Бөлмеде бөгде адам анықталды');
+                if (entry) addEvidenceEntry(entry);
+              }
+            }
           }
         }
-
-        // AI terminate шешімі
-        if (result.final_decision === 'terminate' && warningCount < 3) {
-          warningCount = 2; // келесі triggerWarning шақыруы 3-ші болады
+        if (result.final_decision === 'terminate') {
+          cheatEngine.forceHardLock('AI: final_decision=terminate');
         }
       } catch (e) {
         console.warn('AI frame error:', e.message);
@@ -1076,25 +2268,14 @@
     return map[v] || v;
   }
 
-  let aiFrameInterval = null;
-
-  // AI анализді камера іске қосылғанда бастау
-  // sendFrameToAI өзі currentSessionId жоқ болса return жасайды — race condition жоқ
-  const _origStartCamera = startCamera;
-  startCamera = async function() {
-    await _origStartCamera();
-    if (!aiFrameInterval) {
-      aiFrameInterval = setInterval(sendFrameToAI, 3000);
-    }
-  };
-
-  // Емтиханды аяқтау — session finish
   async function submitExam() {
     if (!confirm('Емтиханды тапсыруға сенімдісіз бе?')) return;
+    stopScreenRecording();
     if (cameraStream)        cameraStream.getTracks().forEach(t => t.stop());
     if (faceDetectInterval)  clearInterval(faceDetectInterval);
     if (aiFrameInterval)     clearInterval(aiFrameInterval);
     if (micAnimFrame)        cancelAnimationFrame(micAnimFrame);
+    stopNofaceCountdown(); stopGazeTimer();
 
     if (currentSessionId) {
       try { await SessionAPI.finish(currentSessionId); } catch (e) {}
@@ -1110,12 +2291,18 @@
   document.getElementById('t1').textContent = nowStr;
   document.getElementById('t2').textContent = nowStr;
 
-  // Камера рұқсатын сұрайды
   checkCameraAvailability();
+  Auth.check();
+  initExamSession();
   </script>
-  <script>
-    Auth.check();
-    initExamSession();
-  </script>
+
+  <!-- ======== ДӘЛЕЛ СУРЕТІН ҮЛКЕЙТУ МОДАЛІ ======== -->
+  <div class="ev-photo-modal hidden" id="evPhotoModal" onclick="closeEvidenceModal(event)">
+    <img id="evPhotoImg" src="" alt="Дәлел суреті" onclick="event.stopPropagation()">
+    <div class="ev-photo-modal-bar">
+      <span class="ev-photo-modal-info" id="evPhotoInfo"></span>
+      <button class="ev-photo-modal-close" onclick="closeEvidenceModal(event)">✕ Жабу</button>
+    </div>
+  </div>
 </body>
 </html>

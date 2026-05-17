@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ProctorAI — Оқытушы Панелі</title>
   <link rel="stylesheet" href="../css/global.css" />
+  <script src="../js/theme.js"></script>
   <script src="../js/api.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
@@ -42,6 +43,61 @@
     .exam-select-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .exam-select-bar select { background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 14px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.875rem; outline: none; cursor: pointer; }
     .bulk-actions { display: flex; gap: 8px; margin-left: auto; }
+
+    /* ── 4-деңгейлі Teacher Alert Modal ── */
+    .teacher-alert-panel {
+      position: fixed; top: 0; right: -420px; width: 400px; height: 100vh; z-index: 9999;
+      background: var(--surface); border-left: 1px solid var(--border);
+      box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+      transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .teacher-alert-panel.open { right: 0; }
+    .tap-header {
+      padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tap-level-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+    }
+    .tap-level-badge.lv1 { background: rgba(245,200,66,0.15); color: var(--accent-yellow); border: 1px solid rgba(245,200,66,0.3); }
+    .tap-level-badge.lv2 { background: rgba(255,140,0,0.15);  color: #ff8c00; border: 1px solid rgba(255,140,0,0.3); }
+    .tap-level-badge.lv3 { background: rgba(255,50,50,0.15);  color: #ff5050; border: 1px solid rgba(255,50,50,0.3); }
+    .tap-level-badge.lv4 { background: rgba(180,0,0,0.2);     color: #ff2020; border: 1px solid rgba(255,0,0,0.4); animation: pulse-dot 0.8s ease infinite; }
+    .tap-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem; padding: 4px 8px; border-radius: 6px; }
+    .tap-close:hover { background: var(--surface-3); }
+    .tap-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+    .tap-student-row { display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--surface-2); border-radius: 12px; margin-bottom: 16px; }
+    .tap-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--surface-3); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+    .tap-score-badge { margin-left: auto; font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; }
+    .tap-ai-box { background: rgba(79,142,255,0.06); border: 1px solid rgba(79,142,255,0.2); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+    .tap-ai-title { font-size: 0.72rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .tap-ai-text { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.7; white-space: pre-line; }
+    .tap-cam-preview { height: 120px; background: linear-gradient(135deg,#070d1a,#0c1425); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; position: relative; overflow: hidden; }
+    .tap-cam-preview .scan-anim { position: absolute; inset: 0; }
+    .tap-cam-preview .scan-anim::after { content:''; position: absolute; left:0; right:0; height:1px; background: linear-gradient(90deg,transparent,rgba(45,212,160,0.6),transparent); animation: scanLine 2s ease-in-out infinite; }
+    .tap-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; }
+    .tap-footer .btn { flex: 1; min-width: 100px; font-size: 0.8rem; padding: 10px 14px; }
+
+    /* ── Heatmap ── */
+    .heatmap-wrap { overflow-x: auto; padding-bottom: 8px; }
+    .heatmap-grid { display: grid; grid-template-rows: repeat(5, 28px); grid-auto-flow: column; gap: 3px; min-width: max-content; }
+    .hm-cell { width: 26px; height: 28px; border-radius: 4px; cursor: pointer; transition: transform 0.15s ease; position: relative; }
+    .hm-cell:hover { transform: scale(1.2); z-index: 2; }
+    .hm-cell:hover::after { content: attr(data-tip); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color:#fff; font-size: 0.65rem; white-space: nowrap; padding: 3px 7px; border-radius: 4px; pointer-events: none; }
+    .hm-0  { background: rgba(45,212,160,0.08); }
+    .hm-1  { background: rgba(45,212,160,0.25); }
+    .hm-2  { background: rgba(245,200,66,0.35); }
+    .hm-3  { background: rgba(255,140,0,0.45); }
+    .hm-4  { background: rgba(255,50,50,0.6); }
+    .hm-5  { background: rgba(200,0,0,0.8); }
+    .hm-row-label { font-size: 0.65rem; color: var(--text-muted); text-align: right; padding-right: 8px; line-height: 28px; }
+    .heatmap-x-axis { display: flex; gap: 3px; margin-top: 4px; padding-left: 0; }
+    .hm-x-label { width: 26px; font-size: 0.58rem; color: var(--text-muted); text-align: center; }
+    .q-bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-top: 12px; }
+    .q-bar { flex: 1; border-radius: 3px 3px 0 0; background: var(--accent); transition: height 0.5s ease; cursor: pointer; position: relative; min-width: 8px; }
+    .q-bar:hover::after { content: attr(data-q); position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color:#fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -61,9 +117,16 @@
       <span class="badge badge-red"><span class="status-dot danger"></span> ТІКЕЛЕЙ ЕМТИХАН ЖҮРУДЕ</span>
     </div>
     <div class="nav-links">
-      <a href="../index.html" class="nav-link">← Кіру</a>
+      <a href="#" class="nav-link" onclick="Auth.clear();window.location.href='../index.html'">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Шығу
+      </a>
       <a href="student-dashboard.html" class="nav-link">Студент</a>
       <a href="admin-dashboard.html" class="nav-link">Әкімші</a>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Тақырыпты ауыстыру">
+        <span class="theme-icon-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <span class="theme-icon-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
+      </button>
     </div>
   </nav>
 
@@ -71,17 +134,45 @@
     <aside class="sidebar">
       <div class="sidebar-section">
         <div class="sidebar-label">Оқытушы панелі</div>
-        <a href="#" class="sidebar-item active"><span class="icon">👁️</span> Тікелей бақылау <span class="badge-count">28</span></a>
-        <a href="#" class="sidebar-item"><span class="icon">⚠️</span> Ескертулер <span class="badge-count">5</span></a>
-        <a href="#" class="sidebar-item"><span class="icon">📝</span> Емтихандар</a>
-        <a href="#" class="sidebar-item"><span class="icon">📊</span> Аналитика</a>
-        <a href="#" class="sidebar-item"><span class="icon">📄</span> Есептер</a>
+        <a href="#" class="sidebar-item active" data-section="live">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          Тікелей бақылау <span class="badge-count">28</span>
+        </a>
+        <a href="#" class="sidebar-item" data-section="alerts">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+          Ескертулер <span class="badge-count">5</span>
+        </a>
+        <a href="#" class="sidebar-item" data-section="exams">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span>
+          Емтихандар
+        </a>
+        <a href="#" class="sidebar-item" data-section="analytics">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
+          Аналитика
+        </a>
+        <a href="#" class="sidebar-item" data-section="reports">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+          Есептер
+        </a>
+        <a href="#" class="sidebar-item" data-section="audit">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          Audit Log
+        </a>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Басқару</div>
-        <a href="#" class="sidebar-item"><span class="icon">👥</span> Студенттер</a>
-        <a href="#" class="sidebar-item"><span class="icon">📅</span> Кесте</a>
-        <a href="#" class="sidebar-item"><span class="icon">🎓</span> Курстар</a>
+        <a href="#" class="sidebar-item" data-section="students">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          Студенттер
+        </a>
+        <a href="#" class="sidebar-item" data-section="schedule">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          Кесте
+        </a>
+        <a href="#" class="sidebar-item" data-section="courses">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg></span>
+          Курстар
+        </a>
       </div>
       <div style="position:absolute;bottom:24px;left:16px;right:16px;">
         <div class="card" style="padding:14px;">
@@ -93,6 +184,8 @@
     </aside>
 
     <main class="main-content">
+      <!-- ===== ТІКЕЛЕЙ БАҚЫЛАУ ===== -->
+      <div id="section-live">
       <div class="page-header fade-in">
         <h1>Тікелей Бақылау 👁️</h1>
         <p>Деректер Құрылымдары және Алгоритмдер — Аралық бақылау · <span style="color:var(--accent)">28 студент белсенді</span> · 43 минут бұрын басталды</p>
@@ -101,7 +194,7 @@
       <div class="grid-4 fade-in-1" style="margin-bottom:24px;">
         <div class="stat-card blue"><div class="stat-card-icon">👥</div><div class="stat-card-value">28</div><div class="stat-card-label">Белсенді Студенттер</div></div>
         <div class="stat-card green"><div class="stat-card-icon">✅</div><div class="stat-card-value">21</div><div class="stat-card-label">Төмен Қауіп</div></div>
-        <div class="stat-card orange"><div class="stat-card-icon">⚠️</div><div class="stat-card-value">4</div><div class="stat-card-label">Орташа Қауіп</div></div>
+        <div class="stat-card orange"><div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="stat-card-value">4</div><div class="stat-card-label">Орташа Қауіп</div></div>
         <div class="stat-card" style="background:var(--surface);border:1px solid var(--border);">
           <div class="stat-card-icon">🚨</div>
           <div class="stat-card-value" style="color:#ff5050;">3</div>
@@ -146,7 +239,228 @@
           </table>
         </div>
       </div>
+      </div><!-- /section-live -->
+
+      <!-- ===== ЕСКЕРТУЛЕР ===== -->
+      <div id="section-alerts" style="display:none;">
+        <div class="page-header fade-in"><h1>Ескертулер</h1><p>Барлық ескертулер мен бұзушылықтар</p></div>
+        <div class="card fade-in"><div class="alert-feed" id="alertFeedFull" style="max-height:none;"></div></div>
+      </div>
+
+      <!-- ===== ЕМТИХАНДАР ===== -->
+      <div id="section-exams" style="display:none;">
+        <div class="page-header fade-in"><h1>📝 Менің Емтихандарым</h1><p>Жасалған емтихандар тізімі</p></div>
+        <div class="card fade-in">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+            <button class="btn btn-primary" style="font-size:0.82rem;">+ Жаңа емтихан</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Атауы</th><th>Топ</th><th>Студенттер</th><th>Күні</th><th>Мәртебе</th><th>Әрекет</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Деректер Құрылымдары — Аралық</strong></td><td>АТ-401</td><td>28</td><td>10 мамыр 2026</td><td><span class="badge badge-green">Тікелей</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Бақылау</button></td></tr>
+              <tr><td><strong>ДҚБЖ — Қорытынды</strong></td><td>АТ-312</td><td>35</td><td>14 мамыр 2026</td><td><span class="badge badge-blue">Жоспарланған</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Өңдеу</button></td></tr>
+              <tr><td><strong>Алгоритмдер — Бақылау</strong></td><td>АТ-401</td><td>30</td><td>5 сәуір 2026</td><td><span class="badge badge-green">Аяқталды</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Есеп</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== АНАЛИТИКА ===== -->
+      <div id="section-analytics" style="display:none;">
+        <div class="page-header fade-in"><h1>📊 Аналитика</h1><p>Студенттер мен емтихан статистикасы</p></div>
+        <div class="grid-4 fade-in" style="margin-bottom:24px;">
+          <div class="stat-card blue"><div class="stat-card-icon">📝</div><div class="stat-card-value">3</div><div class="stat-card-label">Жалпы Емтихан</div></div>
+          <div class="stat-card green"><div class="stat-card-icon">👥</div><div class="stat-card-value">93</div><div class="stat-card-label">Жалпы студент</div></div>
+          <div class="stat-card purple"><div class="stat-card-icon">🤖</div><div class="stat-card-value">24</div><div class="stat-card-label">ИИ ескертулері</div></div>
+          <div class="stat-card orange"><div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="stat-card-value">7%</div><div class="stat-card-label">Бұзушылық %</div></div>
+        </div>
+        <div class="grid-2 fade-in" style="margin-bottom:24px;">
+          <div class="card">
+            <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:4px;">🗓️ Минут бойынша бұзушылықтар</h3>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px;">Емтихан барысындағы риск деңгейінің өзгерісі (5 студент × 60 мин)</p>
+            <div style="display:flex;gap:8px;">
+              <div style="display:flex;flex-direction:column;justify-content:space-around;padding:2px 0;">
+                <div class="hm-row-label">Айгерім</div>
+                <div class="hm-row-label">Берік</div>
+                <div class="hm-row-label">Дана</div>
+                <div class="hm-row-label">Ерлан</div>
+                <div class="hm-row-label">Зарина</div>
+              </div>
+              <div>
+                <div class="heatmap-wrap">
+                  <div class="heatmap-grid" id="heatmapGrid"></div>
+                </div>
+                <div class="heatmap-x-axis" id="heatmapXAxis"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:0.68rem;color:var(--text-muted);">
+              <span>Аз</span>
+              <div style="display:flex;gap:3px;">
+                <div style="width:14px;height:14px;border-radius:3px;" class="hm-0"></div>
+                <div style="width:14px;height:14px;border-radius:3px;" class="hm-1"></div>
+                <div style="width:14px;height:14px;border-radius:3px;" class="hm-2"></div>
+                <div style="width:14px;height:14px;border-radius:3px;" class="hm-3"></div>
+                <div style="width:14px;height:14px;border-radius:3px;" class="hm-4"></div>
+                <div style="width:14px;height:14px;border-radius:3px;" class="hm-5"></div>
+              </div>
+              <span>Көп</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:4px;">❓ Сұрақ бойынша бұзушылықтар</h3>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px;">Қай сұрақта алаяқтық жиіленеді</p>
+            <div class="q-bar-chart" id="qBarChart"></div>
+            <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-muted);margin-top:4px;">
+              <span>1-сұрақ</span><span>12-сұрақ</span><span>25-сұрақ</span>
+            </div>
+            <div style="margin-top:14px;padding:12px;background:var(--surface-2);border-radius:8px;font-size:0.78rem;">
+              <span style="color:var(--accent-yellow);">⚠ Insight:</span>
+              <span id="insightText" style="color:var(--text-secondary);"> Жүктелуде...</span>
+            </div>
+          </div>
+        </div>
+        <div class="card fade-in">
+          <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px;">📋 Бұзушылық түрлері бойынша статистика</h3>
+          <div id="violationTypeStats" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+      </div>
+
+      <!-- ===== ЕСЕПТЕР ===== -->
+      <div id="section-reports" style="display:none;">
+        <div class="page-header fade-in"><h1>📄 Есептер</h1><p>Емтихан есептерін жүктеп алу</p></div>
+        <div class="card fade-in">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--surface-2);border-radius:10px;">
+              <div><strong>Деректер Құрылымдары — Аралық есеп</strong><div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">28 студент · 10 мамыр 2026</div></div>
+              <button class="btn btn-ghost" style="font-size:0.78rem;">📥 Жүктеу</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--surface-2);border-radius:10px;">
+              <div><strong>Алгоритмдер — Бақылау есебі</strong><div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">30 студент · 5 сәуір 2026</div></div>
+              <button class="btn btn-ghost" style="font-size:0.78rem;">📥 Жүктеу</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== AUDIT LOGS ===== -->
+      <div id="section-audit" style="display:none;">
+        <div class="page-header fade-in">
+          <h1>🔐 Audit Logs</h1>
+          <p>Барлық әрекеттер — кім, қашан, қандай ереже бұзды</p>
+        </div>
+        <div class="card fade-in" style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">📋 Іс-қимыл журналы</h3>
+            <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="exportAuditLog()">📤 CSV Экспорт</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Уақыт</th>
+                  <th>Іс-қимыл</th>
+                  <th>Пайдаланушы</th>
+                  <th>Сипаттама</th>
+                  <th>Сессия ID</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogBody">
+                <tr><td colspan="5" style="color:var(--text-muted);padding:16px;text-align:center;">Жазба жоқ</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== СТУДЕНТТЕР ===== -->
+      <div id="section-students" style="display:none;">
+        <div class="page-header fade-in"><h1>👥 Студенттер</h1><p>Тіркелген студенттер тізімі</p></div>
+        <div class="card fade-in">
+          <table class="data-table">
+            <thead><tr><th>Аты</th><th>Топ</th><th>Емтихандар</th><th>Орт. балл</th><th>Соңғы белсенділік</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Айгерім Студент</strong></td><td>АТ-401</td><td>5</td><td style="color:var(--accent-green);">87%</td><td>Бүгін</td></tr>
+              <tr><td><strong>Берік Қалиев</strong></td><td>АТ-401</td><td>5</td><td style="color:var(--accent-yellow);">73%</td><td>Кеше</td></tr>
+              <tr><td><strong>Дана Сейітова</strong></td><td>АТ-312</td><td>4</td><td style="color:var(--accent);">81%</td><td>2 күн бұрын</td></tr>
+              <tr><td><strong>Ерлан Жаков</strong></td><td>АТ-312</td><td>4</td><td style="color:#ff7070;">58%</td><td>3 күн бұрын</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== КЕСТЕ ===== -->
+      <div id="section-schedule" style="display:none;">
+        <div class="page-header fade-in"><h1>📅 Кесте</h1><p>Емтихандар кестесі</p></div>
+        <div class="card fade-in">
+          <table class="data-table">
+            <thead><tr><th>Күн</th><th>Уақыт</th><th>Емтихан</th><th>Топ</th><th>Мәртебе</th></tr></thead>
+            <tbody>
+              <tr><td>10 мамыр 2026</td><td>09:00–10:30</td><td><strong>Деректер Құрылымдары</strong></td><td>АТ-401 (28 студент)</td><td><span class="badge badge-red">2 күн қалды</span></td></tr>
+              <tr><td>14 мамыр 2026</td><td>14:00–16:00</td><td><strong>ДҚБЖ Қорытынды</strong></td><td>АТ-312 (35 студент)</td><td><span class="badge badge-blue">6 күн қалды</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== КУРСТАР ===== -->
+      <div id="section-courses" style="display:none;">
+        <div class="page-header fade-in"><h1>🎓 Курстар</h1><p>Оқытушы курстарының тізімі</p></div>
+        <div class="grid-2 fade-in">
+          <div class="card"><h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:12px;">Деректер Құрылымдары</h3><div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">2 топ · 58 студент</div><div style="font-size:0.82rem;"><span class="badge badge-green">Белсенді</span></div></div>
+          <div class="card"><h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:12px;">Дерекқорды Басқару Жүйелері</h3><div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">1 топ · 35 студент</div><div style="font-size:0.82rem;"><span class="badge badge-blue">Жоспарланған</span></div></div>
+        </div>
+      </div>
+
     </main>
+  </div>
+
+  <!-- ====== 4-ДЕҢГЕЙЛІ TEACHER ALERT PANEL ====== -->
+  <div class="teacher-alert-panel" id="alertPanel">
+    <div class="tap-header">
+      <span class="tap-level-badge lv1" id="alertLevelBadge">🔔 1-деңгей ескерту</span>
+      <button class="tap-close" onclick="closeAlertPanel()">✕</button>
+    </div>
+    <div class="tap-body">
+      <div class="tap-student-row">
+        <div class="tap-avatar" id="alertAvatar">😐</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;" id="alertStudentName">Студент</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Белсенді сессия</div>
+        </div>
+        <div class="tap-score-badge" id="alertScore" style="color:#ff8c00;">0%</div>
+      </div>
+
+      <div id="alertCamPreview" class="tap-cam-preview" style="display:none;">
+        <div class="scan-anim"></div>
+        <div style="text-align:center;">
+          <div style="font-size:2rem;margin-bottom:6px;">📷</div>
+          <div style="font-size:0.75rem;color:var(--accent-green);font-weight:600;">ТІКЕЛЕЙ БЕЙНЕ</div>
+          <div style="font-size:0.68rem;color:var(--text-muted);margin-top:4px;">WebRTC ағыны</div>
+        </div>
+      </div>
+
+      <div class="tap-ai-box">
+        <div class="tap-ai-title">🤖 AI Түсіндірмесі</div>
+        <div class="tap-ai-text" id="alertExplanation">Деректер жүктелуде...</div>
+      </div>
+
+      <div style="background:var(--surface-2);border-radius:10px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Ескерту деңгейлері</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;">
+          <div id="alv1" style="display:flex;align-items:center;gap:8px;color:var(--text-muted);"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent-yellow);flex-shrink:0;"></span>1-деңгей: Жай ескерту (30–60%)</div>
+          <div id="alv2" style="display:flex;align-items:center;gap:8px;color:var(--text-muted);"><span style="width:8px;height:8px;border-radius:50%;background:#ff8c00;flex-shrink:0;"></span>2-деңгей: Дыбыс + терезе (60–75%)</div>
+          <div id="alv3" style="display:flex;align-items:center;gap:8px;color:var(--text-muted);"><span style="width:8px;height:8px;border-radius:50%;background:#ff5050;flex-shrink:0;"></span>3-деңгей: Тікелей камера (75–90%)</div>
+          <div id="alv4" style="display:flex;align-items:center;gap:8px;color:var(--text-muted);"><span style="width:8px;height:8px;border-radius:50%;background:#ff2020;flex-shrink:0;animation:pulse-dot 0.8s infinite;"></span>4-деңгей: Емтиханды тоқтату (90%+)</div>
+        </div>
+      </div>
+    </div>
+    <div class="tap-footer">
+      <button class="btn btn-ghost" onclick="closeAlertPanel()">Жабу</button>
+      <button class="btn" id="alertCamBtn" style="background:rgba(45,212,160,0.15);color:var(--accent-green);border:1px solid rgba(45,212,160,0.3);" onclick="openAlertCamera()">📷 Камера</button>
+      <button class="btn" id="alertPauseBtn" style="background:rgba(255,140,0,0.15);color:#ff8c00;border:1px solid rgba(255,140,0,0.3);" onclick="pauseAlertSession()">⏸ Тоқтата тұру</button>
+      <button class="btn" id="alertPhoneUnlockBtn" style="display:none;background:rgba(45,212,160,0.15);color:var(--accent-green);border:1px solid rgba(45,212,160,0.3);" onclick="phoneUnlockAlertSession()">✅ Рұқсат беру</button>
+      <button class="btn btn-primary" id="alertTermBtn" style="display:none;" onclick="terminateAlertSession()">⛔ Аяқтау</button>
+    </div>
   </div>
 
   <script>
@@ -156,11 +470,22 @@
     // Sidebar user info
     document.querySelector('.sidebar .card div:first-child').textContent = user?.fullName || 'Оқытушы';
 
-    // Logout
-    document.querySelectorAll('.sidebar-item, .nav-link').forEach(a => {
-      if (a.textContent.includes('Шығу') || a.textContent.includes('Кіру')) {
-        a.addEventListener('click', e => { e.preventDefault(); Auth.clear(); window.location.href = '../index.html'; });
-      }
+    // Sidebar навигация
+    const teacherSections = ['live','alerts','exams','analytics','reports','audit','students','schedule','courses'];
+    function showTeacherSection(name) {
+      teacherSections.forEach(id => {
+        const el = document.getElementById('section-' + id);
+        if (el) el.style.display = (id === name) ? '' : 'none';
+      });
+      document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
+        item.classList.toggle('active', item.dataset.section === name);
+      });
+    }
+    document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
+      item.addEventListener('click', e => {
+        e.preventDefault();
+        showTeacherSection(item.dataset.section);
+      });
     });
 
     let allSessions = [];
@@ -180,22 +505,33 @@
         if (filter === 'flagged') return s.violations?.length > 2;
         return true;
       });
+      const hasPhone = (s) => (s.violations || []).some(v => v.type === 'PHONE_DETECTED');
       document.getElementById('monitorGrid').innerHTML = list.length
         ? list.map((s, i) => {
-            const risk = riskLevel(s.cheatScore);
-            return `<div class="student-monitor-card ${risk==='high'?'flagged':risk==='mid'?'warning':''}">
+            const risk   = riskLevel(s.cheatScore);
+            const phone  = hasPhone(s);
+            const colors = { high:'#ff5050', mid:'var(--accent-yellow)', low:'var(--accent)' };
+            return `<div class="student-monitor-card ${risk==='high'?'flagged':risk==='mid'?'warning':''}" onclick="showTeacherAlert(allSessions.find(x=>x.id===${s.id})||allSessions[${i}])" style="cursor:pointer;">
               <div class="cam-area">
                 <div class="cam-scan"></div>
-                <div class="cam-face-icon">${faces[i%faces.length]}</div>
+                <div class="cam-face-icon">${phone ? '📱' : faces[i%faces.length]}</div>
                 <div class="cam-risk ${risk}">${s.cheatScore}%</div>
                 <div class="cam-rec"><div style="width:5px;height:5px;border-radius:50%;background:#ff5050;animation:pulse-dot 1s ease infinite;"></div> ЖАЗ</div>
+                ${phone ? '<div style="position:absolute;top:8px;left:8px;background:rgba(255,30,30,0.9);color:#fff;font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:4px;animation:pulse-dot 0.8s ease infinite;">📱 ТЕЛЕФОН</div>' : ''}
               </div>
               <div class="student-card-info">
                 <div class="student-card-name">${s.studentName}</div>
                 <div class="student-card-meta">
                   <span>${s.violations?.length || 0} бұзушылық</span>
-                  <span class="student-progress-mini" style="color:${risk==='high'?'#ff5050':risk==='mid'?'var(--accent-yellow)':'var(--accent)'}">${s.cheatScore}%</span>
+                  <span class="student-progress-mini" style="color:${colors[risk]}">${s.cheatScore}%</span>
                 </div>
+                ${phone ? `<div style="display:flex;gap:4px;margin-top:6px;">
+                  <button onclick="event.stopPropagation();phoneDecisionAllow(${s.id})" style="flex:1;font-size:0.65rem;padding:4px 6px;background:rgba(45,190,140,0.15);color:var(--accent-green);border:1px solid rgba(45,190,140,0.3);border-radius:5px;cursor:pointer;">✅ Рұқсат</button>
+                  <button onclick="event.stopPropagation();phoneDecisionTerminate(${s.id})" style="flex:1;font-size:0.65rem;padding:4px 6px;background:rgba(255,50,50,0.15);color:#ff5050;border:1px solid rgba(255,50,50,0.3);border-radius:5px;cursor:pointer;">❌ Тоқтат</button>
+                </div>` : ''}
+                ${risk === 'high' && !phone ? `<div style="margin-top:6px;">
+                  <button onclick="event.stopPropagation();terminateSession(${s.id})" style="width:100%;font-size:0.65rem;padding:4px 6px;background:rgba(255,50,50,0.1);color:#ff5050;border:1px solid rgba(255,50,50,0.25);border-radius:5px;cursor:pointer;">⛔ Тоқтату</button>
+                </div>` : ''}
               </div>
             </div>`;
           }).join('')
@@ -291,11 +627,417 @@
       }
     }
 
+    // ====================================================
+    // 4-ДЕҢГЕЙЛІ TEACHER ALERT ЖҮЙЕСІ
+    // ====================================================
+    let _alertSession = null;
+    let _alertSound   = null;
+
+    function getAlertLevel(score) {
+      if (score >= 90) return 4;
+      if (score >= 75) return 3;
+      if (score >= 60) return 2;
+      return 1;
+    }
+
+    function showTeacherAlert(session) {
+      if (!session) return;
+      _alertSession = session;
+      const score   = session.cheatScore || 0;
+      const level   = getAlertLevel(score);
+      const faces   = ['😐','😑','🙂','😶','😊','😔'];
+      const colors  = ['','var(--accent-yellow)','#ff8c00','#ff5050','#ff2020'];
+      const labels  = ['','🔔 1-деңгей: Ескерту','🔊 2-деңгей: Дыбыс + терезе','🚨 3-деңгей: Тікелей камера','🚫 4-деңгей: Шұғыл тоқтату'];
+      const classes = ['','lv1','lv2','lv3','lv4'];
+
+      document.getElementById('alertLevelBadge').textContent  = labels[level];
+      document.getElementById('alertLevelBadge').className    = 'tap-level-badge ' + classes[level];
+      document.getElementById('alertStudentName').textContent = session.studentName || 'Студент';
+      document.getElementById('alertAvatar').textContent      = faces[Math.floor(Math.random() * faces.length)];
+      document.getElementById('alertScore').textContent       = score + '%';
+      document.getElementById('alertScore').style.color       = colors[level];
+
+      // AI explanation from last violation
+      const lastV = (session.violations || []).at(-1);
+      let explainLines = (session.violations || []).slice(-4).map(v => {
+        const map = { NO_FACE:'• Бет анықталмады (камера алдынан кетті)', MULTIPLE_FACES:'• Бірнеше бет анықталды', TAB_SWITCH:'• Қойынды ауыстырылды', COPY_PASTE:'• Ctrl+C/V анықталды', VOICE_DETECTED:'• Дыбыс/сыбыр анықталды', PHONE_DETECTED:'• Телефон анықталды', BOOK_DETECTED:'• Кітап анықталды', GAZE_AWAY:'• Көз экраннан алыс', HEAD_TURNED:'• Бас бұрылды' };
+        return map[v.type] || ('• ' + v.type);
+      });
+      if (!explainLines.length) explainLines = ['• Бұзушылық анықталды'];
+      explainLines.push(`📊 Қауіп баллы: ${score}/100`);
+      document.getElementById('alertExplanation').textContent = explainLines.join('\n');
+
+      // Highlight current level row
+      [1,2,3,4].forEach(i => {
+        const el = document.getElementById('alv' + i);
+        if (el) el.style.color = i === level ? colors[level] : 'var(--text-muted)';
+        if (el) el.style.fontWeight = i === level ? '700' : '400';
+      });
+
+      // Level-specific behavior
+      const camPreview = document.getElementById('alertCamPreview');
+      const termBtn    = document.getElementById('alertTermBtn');
+      camPreview.style.display = level >= 3 ? '' : 'none';
+      termBtn.style.display    = level >= 4 ? '' : 'none';
+
+      document.getElementById('alertPanel').classList.add('open');
+
+      // Level 2+: audio alert
+      if (level >= 2) playAlertSound(level);
+
+      // Level 4: also show toast
+      if (level >= 4) showCriticalToast(session);
+    }
+
+    function closeAlertPanel() {
+      document.getElementById('alertPanel').classList.remove('open');
+      _alertSession = null;
+    }
+
+    function openAlertCamera() {
+      const preview = document.getElementById('alertCamPreview');
+      preview.style.display = '';
+      const inner = preview.querySelector('div');
+      if (inner) inner.innerHTML = `<div style="font-size:1.5rem;margin-bottom:6px;">📷</div><div style="font-size:0.72rem;color:var(--accent-green);font-weight:700;">ТІКЕЛЕЙ АҒЫН АШЫЛДЫ</div><div style="font-size:0.65rem;color:var(--text-muted);margin-top:4px;">${_alertSession?.studentName || ''}</div>`;
+    }
+
+    function pauseAlertSession() {
+      if (!_alertSession) return;
+      const btn = document.getElementById('alertPauseBtn');
+      btn.textContent = '⏸ Тоқтатылды';
+      btn.style.background = 'rgba(255,50,50,0.15)';
+      btn.style.color = '#ff5050';
+      addAlertToFeed({ type: 'warn', icon: '⏸', title: _alertSession.studentName + ' — сессия тоқтатылды', sub: 'Мұғалімнің сұрауы бойынша', time: new Date() });
+    }
+
+    function terminateAlertSession() {
+      if (!_alertSession || !confirm(_alertSession.studentName + ' студентінің емтиханын аяқтайсыз ба?')) return;
+      terminateSession(_alertSession.id);
+      closeAlertPanel();
+    }
+
+    function playAlertSound(level) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = level >= 4 ? 880 : level >= 3 ? 660 : 440;
+        osc.type = level >= 4 ? 'sawtooth' : 'sine';
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (level >= 4 ? 0.8 : 0.4));
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + (level >= 4 ? 0.8 : 0.4));
+      } catch {}
+    }
+
+    function showCriticalToast(session) {
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:99999;background:linear-gradient(135deg,rgba(180,0,0,0.97),rgba(220,0,0,0.97));color:#fff;border-radius:14px;padding:18px 28px;max-width:420px;width:90%;font-size:0.9rem;box-shadow:0 12px 50px rgba(200,0,0,0.6);animation:overlayFadeIn 0.3s ease;text-align:center;border:1px solid rgba(255,100,100,0.4);';
+      toast.innerHTML = `<div style="font-size:1.5rem;margin-bottom:8px;">🚫</div><div style="font-weight:800;font-size:1.1rem;margin-bottom:6px;">КРИТИКАЛЫҚ ҚАУІП!</div><div style="opacity:0.9;">${session.studentName} — ${session.cheatScore}%</div><div style="opacity:0.7;font-size:0.78rem;margin-top:6px;">Емтиханды дереу тоқтатуды қарастырыңыз</div>`;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.5s ease'; }, 5000);
+      setTimeout(() => toast.remove(), 5500);
+    }
+
+    function addAlertToFeed(alert) {
+      const icon = alert.type === 'danger' ? '🚨' : alert.type === 'warn' ? '⚠️' : 'ℹ️';
+      const t    = alert.time ? new Date(alert.time).toLocaleTimeString('kk-KZ', {hour:'2-digit',minute:'2-digit'}) : '';
+      const html = `<div class="live-alert" style="animation:fadeIn 0.3s ease"><div class="alert-icon ${alert.type}">${icon}</div><div class="alert-body"><div class="alert-title">${alert.title}</div><div class="alert-sub">${alert.sub || ''}</div></div><div class="alert-time">${t}</div></div>`;
+      ['alertFeed','alertFeedFull'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.insertAdjacentHTML('afterbegin', html);
+        while (el.children.length > 14) el.lastChild.remove();
+      });
+    }
+
+    // ====================================================
+    // HEATMAP + QUESTION BAR CHART
+    // ====================================================
+    function renderHeatmap() {
+      const grid    = document.getElementById('heatmapGrid');
+      const xAxis   = document.getElementById('heatmapXAxis');
+      if (!grid) return;
+
+      const ROWS = 5, COLS = 60;
+      const STUDENTS = ['Айгерім','Берік','Дана','Ерлан','Зарина'];
+      // Fake heatmap data: random with some clusters
+      const seeds = [
+        [12,13,14,28,29,45,46,47],  // Айгерім — cluster at 12-14, 28-29, 45-47
+        [5,6,22,23,24,50,51],
+        [18,19,20,35,36,55,56,57,58],
+        [3,4,5,30,31,32,40,41,42,43,44],
+        [8,25,26,48,49,50],
+      ];
+
+      grid.innerHTML = '';
+      // Build column-major order (CSS grid-auto-flow: column)
+      for (let col = 0; col < COLS; col++) {
+        for (let row = 0; row < ROWS; row++) {
+          const cell = document.createElement('div');
+          cell.className = 'hm-cell';
+          const inCluster = seeds[row].some(s => Math.abs(s - col) <= 1);
+          const val = inCluster ? Math.floor(Math.random() * 3) + 2 : Math.random() < 0.1 ? 1 : 0;
+          cell.classList.add('hm-' + val);
+          cell.setAttribute('data-tip', `${STUDENTS[row]}, ${col}мин: ${val > 0 ? ['','аз','орта','жоғары','өте жоғары','критикалық'][val] : 'бұзушылық жоқ'}`);
+          grid.appendChild(cell);
+        }
+      }
+
+      // X axis labels (every 10 min)
+      xAxis.innerHTML = '';
+      for (let i = 0; i < COLS; i++) {
+        const lbl = document.createElement('div');
+        lbl.className = 'hm-x-label';
+        lbl.textContent = i % 10 === 0 ? i + 'м' : '';
+        xAxis.appendChild(lbl);
+      }
+    }
+
+    function renderQBarChart() {
+      const chart = document.getElementById('qBarChart');
+      const insight = document.getElementById('insightText');
+      if (!chart) return;
+
+      // Fake per-question violation data (25 questions)
+      const data = [2,1,0,3,1,8,2,0,1,12,4,1,2,15,3,1,0,7,2,1,3,18,2,1,4];
+      const maxV = Math.max(...data);
+      const maxIdx = data.indexOf(maxV);
+
+      chart.innerHTML = data.map((v, i) => {
+        const pct = maxV ? (v / maxV * 100) : 0;
+        const col = v > 12 ? '#ff3333' : v > 7 ? '#ff8c00' : v > 3 ? 'var(--accent-yellow)' : 'var(--accent)';
+        return `<div class="q-bar" style="height:${Math.max(pct,3)}%;background:${col};" data-q="${i+1}-сұрақ: ${v} бұзушылық"></div>`;
+      }).join('');
+
+      if (insight) insight.textContent = ` №${maxIdx+1} сұрақта ең көп бұзушылық (${maxV}) — сұрақ тым қиын болуы мүмкін`;
+    }
+
+    function renderViolationTypeStats() {
+      const el = document.getElementById('violationTypeStats');
+      if (!el) return;
+      const stats = [
+        { type: 'TAB_SWITCH',      label: '🖥️ Қойынды ауыстыру',    count: 47, color: 'var(--accent-yellow)' },
+        { type: 'COPY_PASTE',       label: '📋 Ctrl+C/V',             count: 31, color: 'var(--accent)' },
+        { type: 'GAZE_AWAY',        label: '👁️ Экраннан алыс',        count: 28, color: '#ff8c00' },
+        { type: 'NO_FACE',          label: '👤 Бет жоқ',              count: 19, color: '#ff5050' },
+        { type: 'VOICE_DETECTED',   label: '🔊 Дыбыс анықталды',      count: 14, color: '#ff8c00' },
+        { type: 'PHONE_DETECTED',   label: '📱 Телефон',              count: 6,  color: '#ff3333' },
+        { type: 'MULTIPLE_PERSONS', label: '👥 Бірнеше адам',         count: 3,  color: '#ff2020' },
+      ];
+      const total = stats.reduce((s, r) => s + r.count, 0);
+      el.innerHTML = stats.map(r => {
+        const pct = Math.round(r.count / total * 100);
+        return `<div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:140px;font-size:0.78rem;color:var(--text-secondary);flex-shrink:0;">${r.label}</div>
+          <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${pct}%;background:${r.color};"></div></div>
+          <div style="font-size:0.78rem;font-weight:700;color:${r.color};width:40px;text-align:right;">${r.count}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);width:34px;text-align:right;">${pct}%</div>
+        </div>`;
+      }).join('');
+    }
+
+    // ====================================================
+    // ТЕЛЕФОН РҰҚСАТ / ТОҚТАТУ панелі
+    // ====================================================
+    let _phoneAlertSessionId = null;
+
+    function showPhoneDecisionPanel(session) {
+      _phoneAlertSessionId = session.id;
+      const panel = document.createElement('div');
+      panel.id = 'phoneDecisionModal';
+      panel.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(5,8,16,0.92);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s ease;';
+      panel.innerHTML = `
+        <div style="background:linear-gradient(145deg,#180808,#100303);border:2px solid #ff4040;border-radius:20px;padding:40px;max-width:460px;width:90%;text-align:center;box-shadow:0 0 60px rgba(255,50,50,0.3);">
+          <div style="font-size:3rem;margin-bottom:12px;">📱</div>
+          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:#ff4040;margin-bottom:10px;">Телефон анықталды!</div>
+          <div style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:8px;">
+            <strong style="color:var(--text-primary);">${session.studentName}</strong> студенті телефон немесе қосымша құрылғы қолдануда.<br>
+            Қауіп деңгейі: <strong style="color:#ff5050;">${session.cheatScore}%</strong>
+          </div>
+          <div style="background:rgba(255,64,64,0.08);border:1px solid rgba(255,64,64,0.2);border-radius:10px;padding:14px;margin:16px 0;font-size:0.82rem;color:#ff8080;text-align:left;">
+            📸 Скриншот сақталды · 🕐 ${new Date().toLocaleTimeString('kk-KZ')} · 📋 Audit log жазылды
+          </div>
+          <div style="display:flex;gap:12px;margin-top:20px;">
+            <button onclick="phoneDecisionAllow(${session.id})"
+              style="flex:1;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,rgba(45,190,140,0.9),rgba(30,150,110,0.9));color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;">
+              ✅ Емтиханды жалғастыру
+            </button>
+            <button onclick="phoneDecisionTerminate(${session.id})"
+              style="flex:1;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;">
+              ❌ Емтиханды тоқтату
+            </button>
+          </div>
+          <button onclick="document.getElementById('phoneDecisionModal').remove()" style="margin-top:12px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.82rem;">Жабу</button>
+        </div>`;
+      document.body.appendChild(panel);
+    }
+
+    async function phoneDecisionAllow(sessionId) {
+      try {
+        await apiFetch(`${API_BASE}/sessions/${sessionId}/phone-unlock`, { method: 'PATCH' });
+        addAlertToFeed({ type: 'info', icon: '✅', title: 'Телефон рұқсаты берілді', sub: 'Мұғалім студентке емтиханды жалғастыруға рұқсат берді', time: new Date() });
+        writeAuditLog('PHONE_ALLOWED', sessionId, 'Мұғалім телефон қолдануға рұқсат берді');
+      } catch (e) { console.warn(e); }
+      document.getElementById('phoneDecisionModal')?.remove();
+    }
+
+    async function phoneDecisionTerminate(sessionId) {
+      if (!confirm('Студенттің емтиханын тоқтатасыз ба?')) return;
+      try {
+        await apiFetch(`${API_BASE}/sessions/${sessionId}/terminate`, { method: 'PATCH' });
+        addAlertToFeed({ type: 'danger', icon: '⛔', title: 'Емтихан тоқтатылды', sub: 'Телефон қолдану себебімен мұғалім тоқтатты', time: new Date() });
+        writeAuditLog('SESSION_TERMINATED_PHONE', sessionId, 'Мұғалім телефон себебімен емтиханды тоқтатты');
+        loadSessions();
+      } catch (e) { alert('Қате: ' + e.message); }
+      document.getElementById('phoneDecisionModal')?.remove();
+    }
+
+    // Also hook the existing phone unlock button in alert panel
+    function phoneUnlockAlertSession() {
+      if (_alertSession) phoneDecisionAllow(_alertSession.id);
+    }
+
+    // ====================================================
+    // AUDIT LOG
+    // ====================================================
+    const _auditLog = [];
+
+    function writeAuditLog(action, sessionId, details) {
+      const entry = {
+        id:        Date.now(),
+        action,
+        sessionId,
+        details,
+        who:       user?.fullName || 'Мұғалім',
+        email:     user?.email || '-',
+        timestamp: new Date().toISOString(),
+        browser:   navigator.userAgent.substring(0, 80),
+      };
+      _auditLog.unshift(entry);
+      if (_auditLog.length > 200) _auditLog.pop();
+      renderAuditLog();
+      // Try to persist to backend
+      SessionAPI.addViolation?.({
+        sessionId: sessionId || 0,
+        type:      action,
+        score:     0,
+        details:   JSON.stringify({ who: entry.who, details, browser: entry.browser })
+      }).catch(() => {});
+    }
+
+    function renderAuditLog() {
+      const el = document.getElementById('auditLogBody');
+      if (!el) return;
+      el.innerHTML = _auditLog.slice(0, 50).map(e => {
+        const t = new Date(e.timestamp).toLocaleTimeString('kk-KZ', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        const actionColors = { PHONE_ALLOWED:'var(--accent-green)', SESSION_TERMINATED_PHONE:'#ff5050', SESSION_TERMINATED:'#ff5050', EXAM_PAUSED:'#ff8c00', WARNING_SENT:'var(--accent-yellow)' };
+        const color = actionColors[e.action] || 'var(--text-secondary)';
+        return `<tr>
+          <td style="color:var(--text-muted);font-size:0.75rem;">${t}</td>
+          <td style="font-weight:600;color:${color};font-size:0.8rem;">${e.action}</td>
+          <td style="font-size:0.78rem;">${e.who}</td>
+          <td style="font-size:0.75rem;color:var(--text-muted);">${e.details}</td>
+          <td style="font-size:0.7rem;color:var(--text-muted);">#${e.sessionId || '-'}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="5" style="color:var(--text-muted);padding:12px;text-align:center;">Жазба жоқ</td></tr>';
+    }
+
+    // ====================================================
+    // MAIN INIT + REAL-TIME POLLING
+    // ====================================================
+    let _prevHighRiskIds     = new Set();
+    let _prevPhoneDetected   = new Set();
+    let _prevViolationCounts = {};
+
+    function checkAndTriggerAlerts(sessions) {
+      sessions.forEach(s => {
+        const prevCount = _prevViolationCounts[s.id] || 0;
+        const curCount  = s.violations?.length || 0;
+
+        // New violation detected
+        if (curCount > prevCount) {
+          _prevViolationCounts[s.id] = curCount;
+          const newViolations = (s.violations || []).slice(prevCount);
+          newViolations.forEach(v => {
+            const icons = { PHONE_DETECTED:'📱', NO_FACE:'👤', MULTIPLE_FACES:'👥', MULTIPLE_PERSONS:'👥', HEAD_TURNED:'↩️', VOICE_DETECTED:'🔊', BOOK_DETECTED:'📚', TAB_SWITCH:'🖥️', GAZE_AWAY:'👁️', COPY_PASTE:'📋', WINDOW_MINIMIZED:'🔲' };
+            const labels = { PHONE_DETECTED:'Телефон анықталды!', NO_FACE:'Бет жоқ!', MULTIPLE_PERSONS:'Бөгде адам!', MULTIPLE_FACES:'Бірнеше адам!', TAB_SWITCH:'Қойынды ауыстырылды', GAZE_AWAY:'Экраннан алыс', VOICE_DETECTED:'Дыбыс/сыбыр', BOOK_DETECTED:'Кітап/шпаргалка', HEAD_TURNED:'Бас бұрылды', COPY_PASTE:'Ctrl+C/V' };
+            const icon  = icons[v.type] || '⚠️';
+            const label = labels[v.type] || v.type;
+            const type  = v.score >= 60 ? 'danger' : v.score >= 30 ? 'warn' : 'info';
+            addAlertToFeed({ type, icon, title: `${s.studentName} — ${label}`, sub: `Қауіп: ${s.cheatScore}% · ${new Date(v.detectedAt || Date.now()).toLocaleTimeString('kk-KZ')}`, time: new Date() });
+
+            // Phone detection → show decision panel
+            if (v.type === 'PHONE_DETECTED' && !_prevPhoneDetected.has(s.id)) {
+              _prevPhoneDetected.add(s.id);
+              playAlertSound(4);
+              showPhoneDecisionPanel(s);
+              writeAuditLog('PHONE_DETECTED', s.id, `${s.studentName} телефон анықталды. Қауіп: ${s.cheatScore}%`);
+              setTimeout(() => _prevPhoneDetected.delete(s.id), 30000);
+            }
+          });
+        }
+
+        // Risk level change
+        if (s.cheatScore >= 60 && !_prevHighRiskIds.has(s.id)) {
+          _prevHighRiskIds.add(s.id);
+          const level = getAlertLevel(s.cheatScore);
+          if (level >= 3) showTeacherAlert(s);
+          else if (level >= 2) playAlertSound(level);
+          writeAuditLog('HIGH_RISK_DETECTED', s.id, `${s.studentName} — ${s.cheatScore}% қауіп деңгейі`);
+        }
+        if (s.cheatScore < 30) _prevHighRiskIds.delete(s.id);
+      });
+    }
+
     (async () => {
       await loadExams();
       await loadSessions();
-      setInterval(loadSessions, 15000);
+      renderHeatmap();
+      renderQBarChart();
+      renderViolationTypeStats();
+
+      // Poll every 5 seconds for real-time updates
+      setInterval(async () => {
+        await loadSessions();
+        checkAndTriggerAlerts(allSessions);
+      }, 5000);
     })();
+
+    function exportAuditLog() {
+      const headers = ['Уақыт','Іс-қимыл','Пайдаланушы','Сипаттама','Сессия ID','Браузер'];
+      const rows = _auditLog.map(e => [
+        new Date(e.timestamp).toLocaleString('ru-RU'),
+        e.action, e.who, e.details, e.sessionId || '-',
+        (e.browser || '').replace(/,/g, ';')
+      ]);
+      const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a'); a.href = url;
+      a.download = 'audit_log_' + Date.now() + '.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Audit log section init
+    writeAuditLog('SESSION_START', 0, 'Мұғалім панелі ашылды · ' + new Date().toLocaleDateString('ru-RU'));
+
+    // Simulate demo alert (useful for testing without backend)
+    document.querySelector('[data-section="live"]')?.addEventListener('click', () => {
+      if (allSessions.length === 0) {
+        const demo = [
+          { id:1, studentName:'Берік Қалиев',   cheatScore:78, violations:[{type:'TAB_SWITCH',score:8,detectedAt:new Date()},{type:'COPY_PASTE',score:5,detectedAt:new Date()},{type:'NO_FACE',score:40,detectedAt:new Date()}], examId:1 },
+          { id:2, studentName:'Ерлан Жаков',     cheatScore:92, violations:[{type:'PHONE_DETECTED',score:70,detectedAt:new Date()},{type:'GAZE_AWAY',score:20,detectedAt:new Date()}], examId:1 },
+          { id:3, studentName:'Дана Сейітова',   cheatScore:45, violations:[{type:'TAB_SWITCH',score:8,detectedAt:new Date()}], examId:1 },
+          { id:4, studentName:'Айгерім Студент', cheatScore:12, violations:[], examId:1 },
+          { id:5, studentName:'Зарина Мұқанова', cheatScore:63, violations:[{type:'VOICE_DETECTED',score:30,detectedAt:new Date()},{type:'GAZE_AWAY',score:20,detectedAt:new Date()}], examId:1 },
+        ];
+        allSessions = demo;
+        renderGrid(demo);
+        checkAndTriggerAlerts(demo);
+      }
+    });
   </script>
 </body>
 </html>

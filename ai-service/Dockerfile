@@ -16,7 +16,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglib2.0-0 libsm6 libxext6 libxrender-dev \
-    libsndfile1 \
+    libsndfile1 curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages

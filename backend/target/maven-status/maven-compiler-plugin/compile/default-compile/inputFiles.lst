@@ -15,6 +15,10 @@ C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\j
 C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\Exam.java
 C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\ExamSession.java
 C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\ExamStatus.java
+C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\ExamType.java
+C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\Question.java
+C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\QuestionOption.java
+C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\QuestionType.java
 C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\Role.java
 C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\SessionStatus.java
 C:\Users\132\OneDrive\Desktop\Java final project\proktorai-kz\backend\src\main\java\kz\proktorai\entity\User.java

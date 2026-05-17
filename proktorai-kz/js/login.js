@@ -1,9 +1,4 @@
-// Егер token бар болса — тікелей бетке жіберу
-(function () {
-  const token = localStorage.getItem('accessToken');
-  const role  = (() => { try { return JSON.parse(localStorage.getItem('user'))?.role; } catch { return null; } })();
-  if (token && role) redirectByRole(role);
-})();
+// Басты бетті әрдайым көрсету үшін авто-redirect алынып тасталды
 
 function redirectByRole(role) {
   if      (role === 'STUDENT') window.location.href = 'pages/student-dashboard.html';

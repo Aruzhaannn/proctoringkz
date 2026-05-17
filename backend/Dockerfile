@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
+RUN chmod +x mvnw && sed -i 's/\r$//' mvnw
 RUN ./mvnw dependency:go-offline -q
 
 COPY src/ src/
@@ -19,4 +20,5 @@ USER proktor
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+
