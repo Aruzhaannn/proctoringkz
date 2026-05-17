@@ -100,7 +100,10 @@ async function apiFetch(url, options = {}, _retry = false) {
     return _demoHandler(url, options);
   }
 
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  const headers = { ...options.headers };
+  if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
   if (currentToken) headers['Authorization'] = 'Bearer ' + currentToken;
 
   const res = await fetch(url, { ...options, headers });
@@ -148,21 +151,29 @@ const AuthAPI = {
   me:       ()                => apiFetch(`${API_BASE}/auth/me`),
 };
 
+// ── Group API ────────────────────────────────────────────────
+const GroupAPI = {
+  getAll:        ()          => apiFetch(`${API_BASE}/groups`),
+  create:        (name)      => apiFetch(`${API_BASE}/groups`, { method:'POST', body: JSON.stringify({name}) }),
+  addStudents:   (id, ids)   => apiFetch(`${API_BASE}/groups/${id}/students`, { method:'POST', body: JSON.stringify({studentIds: ids}) })
+};
+
 // ── Exam API ─────────────────────────────────────────────────
 const ExamAPI = {
-  getAll:     ()       => apiFetch(`${API_BASE}/exams`),
-  getActive:  ()       => apiFetch(`${API_BASE}/exams/active`),
-  getById:    (id)     => apiFetch(`${API_BASE}/exams/${id}`),
-  getMine:    ()       => apiFetch(`${API_BASE}/exams/my`),
-  create:     (data)   => apiFetch(`${API_BASE}/exams`,            { method:'POST', body: JSON.stringify(data) }),
-  activate:   (id)     => apiFetch(`${API_BASE}/exams/${id}/activate`, { method:'PATCH' }),
-  finish:     (id)     => apiFetch(`${API_BASE}/exams/${id}/finish`,   { method:'PATCH' }),
+  getAll:         ()         => apiFetch(`${API_BASE}/exams`),
+  getActive:      ()         => apiFetch(`${API_BASE}/exams/active`),
+  getById:        (id)       => apiFetch(`${API_BASE}/exams/${id}`),
+  getMine:        ()         => apiFetch(`${API_BASE}/exams/my`),
+  create:         (data)     => apiFetch(`${API_BASE}/exams`,            { method:'POST', body: JSON.stringify(data) }),
+  createWithFile: (formData) => apiFetch(`${API_BASE}/exams/with-file`,  { method:'POST', body: formData }),
+  activate:       (id)       => apiFetch(`${API_BASE}/exams/${id}/activate`, { method:'PATCH' }),
+  finish:         (id)       => apiFetch(`${API_BASE}/exams/${id}/finish`,   { method:'PATCH' }),
 };
 
 // ── Session API ───────────────────────────────────────────────
 const SessionAPI = {
-  start:         (examId)  => apiFetch(`${API_BASE}/sessions/start/${examId}`, { method:'POST' }),
-  finish:        (id)      => apiFetch(`${API_BASE}/sessions/${id}/finish`,    { method:'PATCH' }),
+  start:         (examId)        => apiFetch(`${API_BASE}/sessions/start/${examId}`, { method:'POST' }),
+  finish:        (id, answers)   => apiFetch(`${API_BASE}/sessions/${id}/finish`,    { method:'PATCH', body: answers ? JSON.stringify({answers}) : null }),
   getMy:         ()        => apiFetch(`${API_BASE}/sessions/my`),
   getByExam:     (examId)  => apiFetch(`${API_BASE}/sessions/exam/${examId}`),
   getViolations: (id)      => apiFetch(`${API_BASE}/sessions/${id}/violations`),
