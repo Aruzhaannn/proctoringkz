@@ -19,20 +19,19 @@ _audio_detector  = AudioDetector()
 
 # Violation weights for cheat score
 _WEIGHTS: dict[str, int] = {
-    "NO_FACE":           40,
-    "MULTIPLE_FACES":    60,
-    "PERSON_ABSENT":     40,
+    "NO_FACE":           35,
+    "MULTIPLE_FACES":    55,
+    "PERSON_ABSENT":     35,
     "MULTIPLE_PERSONS":  50,
-    "GAZE_AWAY":         20,
-    "HEAD_TURNED":       25,
-    "HEAD_NOT_DETECTED": 15,
+    "GAZE_AWAY":         15,     # lowered — debounce already filters noise
+    "HEAD_TURNED":       18,     # lowered — debounce already filters noise
     "PHONE_DETECTED":    70,
-    "BOOK_DETECTED":     40,
-    "VOICE_DETECTED":    30,
-    "MULTIPLE_VOICES":   50,
+    "BOOK_DETECTED":     35,
+    "VOICE_DETECTED":    25,
+    "MULTIPLE_VOICES":   45,
     "TAB_SWITCH":         8,
     "COPY_PASTE":         5,
-    "WINDOW_MINIMIZED":  30,
+    "WINDOW_MINIMIZED":  25,
 }
 
 _EVENT_LABELS: dict[str, str] = {
@@ -40,9 +39,8 @@ _EVENT_LABELS: dict[str, str] = {
     "MULTIPLE_FACES":   "Бірнеше бет анықталды — бөгде адам бар",
     "PERSON_ABSENT":    "Адам кадрда жоқ",
     "MULTIPLE_PERSONS": "Бірнеше адам анықталды",
-    "GAZE_AWAY":        "Көз экраннан басқа жаққа бұрылды",
-    "HEAD_TURNED":      "Бас экраннан бұрылды",
-    "HEAD_NOT_DETECTED":"Бас позициясы анықталмады",
+    "GAZE_AWAY":        "Көз экраннан басқа жаққа бұрылды (бірнеше секунд)",
+    "HEAD_TURNED":      "Бас экраннан бұрылды (бірнеше секунд)",
     "PHONE_DETECTED":   "Телефон анықталды",
     "BOOK_DETECTED":    "Кітап немесе шпаргалка анықталды",
     "VOICE_DETECTED":   "Сырттан дауыс естілді",
@@ -126,12 +124,25 @@ async def analyze_frame(
         if gaze.violation:
             violations.append(gaze.violation)
 
-    # ── 3. Head pose (MediaPipe FaceMesh + solvePnP) ──────────────────
+    # ── 3. Head pose (YOLO-pose keypoints primary, MediaPipe fallback) ──
     head_pitch = 0.0
     head_yaw   = 0.0
     head_roll  = 0.0
     head_turned = False
-    if face_result.landmarks:
+    
+    # Primary: use YOLO-pose keypoints (more robust)
+    if face_result.pose_keypoints and len(face_result.pose_keypoints) > 0:
+        head = _head_pose.estimate_from_yolo_keypoints(
+            face_result.pose_keypoints[0], image.shape
+        )
+        head_pitch  = head.pitch
+        head_yaw    = head.yaw
+        head_roll   = head.roll
+        head_turned = head.looking_away
+        if head.violation:
+            violations.append(head.violation)
+    # Fallback: MediaPipe landmarks
+    elif face_result.landmarks:
         head = _head_pose.estimate_from_landmarks(
             face_result.landmarks, image.shape
         )
@@ -141,10 +152,6 @@ async def analyze_frame(
         head_turned = head.looking_away
         if head.violation:
             violations.append(head.violation)
-    elif face_result.face_count == 0:
-        # No face → head not detected
-        if "NO_FACE" not in violations:
-            violations.append("HEAD_NOT_DETECTED")
 
     # ── 4. Object / person detection (YOLOv8) ─────────────────────────
     obj = _object_detector.detect(image)

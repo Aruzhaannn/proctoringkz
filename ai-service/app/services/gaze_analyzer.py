@@ -19,13 +19,20 @@ _RIGHT_EYE_CORNERS = (362, 263)   # outer, inner corner of right eye
 _LEFT_EYE_TOP_BOTTOM  = (159, 145)  # top, bottom of left eye
 _RIGHT_EYE_TOP_BOTTOM = (386, 374)  # top, bottom of right eye
 
-# Thresholds for gaze direction
-_HORIZONTAL_THRESHOLD = 0.28    # ratio offset from center → looking left/right
-_VERTICAL_THRESHOLD   = 0.25    # ratio offset from center → looking up/down
+# Thresholds for gaze direction — very relaxed to avoid false positives
+# during natural reading / thinking. Students naturally look around a bit.
+_HORIZONTAL_THRESHOLD = 0.55    # increased from 0.40 — very generous
+_VERTICAL_THRESHOLD   = 0.50    # increased from 0.40 — natural reading causes some vertical shift
+
+# Debounce: how many consecutive "away" readings before flagging
+_GAZE_AWAY_DEBOUNCE = 3
 
 
 class GazeAnalyzer:
     """Iris-based gaze estimation using MediaPipe FaceMesh landmarks (468+10)."""
+
+    def __init__(self):
+        self._away_counter = 0
 
     def analyze_from_landmarks(self, landmarks: list[list], baseline_h: float = 0.0, baseline_v: float = 0.0) -> GazeResult:
         """
@@ -109,10 +116,17 @@ class GazeAnalyzer:
                 direction = f"{v_dir}-{h_dir}"
 
             looking_away = direction != "center"
-            violation = "GAZE_AWAY" if looking_away else None
+            
+            # Debounce: only flag GAZE_AWAY after several consecutive detections
+            if looking_away:
+                self._away_counter += 1
+            else:
+                self._away_counter = 0
+            
+            violation = "GAZE_AWAY" if (looking_away and self._away_counter >= _GAZE_AWAY_DEBOUNCE) else None
 
             return GazeResult(
-                looking_away=looking_away,
+                looking_away=looking_away and self._away_counter >= _GAZE_AWAY_DEBOUNCE,
                 direction=direction,
                 violation=violation,
                 gaze_h=raw_h,
@@ -125,7 +139,8 @@ class GazeAnalyzer:
     def _basic_from_landmarks(self, landmarks: list[list] | None) -> GazeResult:
         """Fallback: estimate gaze from basic landmarks (no iris data)."""
         if not landmarks or len(landmarks) < 468:
-            return GazeResult(looking_away=True, direction="unknown", violation="GAZE_AWAY")
+            # Don't auto-flag as GAZE_AWAY — we simply don't have data
+            return GazeResult(looking_away=False, direction="unknown", violation=None)
 
         # Use nose tip (1) vs face center to estimate rough gaze
         nose = landmarks[1]
@@ -136,9 +151,10 @@ class GazeAnalyzer:
         face_w  = abs(right_cheek[0] - left_cheek[0]) + 1e-6
         offset  = (nose[0] - face_cx) / face_w
 
-        if offset < -0.15:
+        # Very generous threshold — only flag extreme head turns
+        if offset < -0.45:
             return GazeResult(looking_away=True, direction="right", violation="GAZE_AWAY")
-        elif offset > 0.15:
+        elif offset > 0.45:
             return GazeResult(looking_away=True, direction="left", violation="GAZE_AWAY")
 
         return GazeResult(looking_away=False, direction="center", violation=None)

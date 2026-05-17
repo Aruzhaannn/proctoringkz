@@ -65,9 +65,8 @@ public class ExamController {
         return ResponseEntity.ok(examService.getById(id));
     }
 
-    // Admin — барлық емтихандар
+    // Барлық пайдаланушылар — барлық емтихандарды көре алады (кесте үшін)
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ExamResponse>> getAll() {
         return ResponseEntity.ok(examService.getAll());
     }

@@ -67,9 +67,8 @@ public class ExamSessionController {
         return ResponseEntity.ok(sessionService.addViolation(request));
     }
 
-    // Student — өзінің сессиялары
+    // Кез келген пайдаланушы (Студент немесе Админ) — өзінің сессиялары
     @GetMapping("/my")
-    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<List<SessionResponse>> mySessions(
             @AuthenticationPrincipal User student) {
         return ResponseEntity.ok(sessionService.getMySessions(student));
