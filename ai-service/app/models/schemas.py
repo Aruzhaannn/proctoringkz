@@ -11,6 +11,8 @@ class AnalyzeResponse(BaseModel):
     # Gaze (Haar eye cascade)
     gaze_direction: str
     looking_away: bool
+    gaze_h: float = 0.0
+    gaze_v: float = 0.0
 
     # Head pose (MediaPipe)
     head_pitch: float

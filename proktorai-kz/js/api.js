@@ -115,13 +115,15 @@ const AnalyticsAPI = {
 
 // ── AI Service ────────────────────────────────────────────────
 const AiAPI = {
-  async analyzeFrame(sessionId, blob, { tabSwitches = 0, copyPasteCount = 0, windowMinimized = 0 } = {}) {
+  async analyzeFrame(sessionId, blob, { tabSwitches = 0, copyPasteCount = 0, windowMinimized = 0, gazeBaselineH = 0.0, gazeBaselineV = 0.0 } = {}) {
     const fd = new FormData();
     fd.append('session_id', String(sessionId));
     fd.append('frame', blob, 'frame.jpg');
     fd.append('tab_switches', String(tabSwitches));
     fd.append('copy_paste_count', String(copyPasteCount));
     fd.append('window_minimized', String(windowMinimized));
+    fd.append('gaze_baseline_h', String(gazeBaselineH));
+    fd.append('gaze_baseline_v', String(gazeBaselineV));
     const res = await fetch(`${AI_BASE}/analyze`, {
       method: 'POST', body: fd
     });

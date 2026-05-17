@@ -92,6 +92,8 @@ async def analyze_frame(
     tab_switches: int = Form(0),
     copy_paste_count: int = Form(0),
     window_minimized: int = Form(0),
+    gaze_baseline_h: float = Form(0.0),
+    gaze_baseline_v: float = Form(0.0),
 ):
     data = await frame.read()
     arr = np.frombuffer(data, np.uint8)
@@ -109,10 +111,18 @@ async def analyze_frame(
     # ── 2. Gaze analysis (MediaPipe FaceMesh iris landmarks) ──────────
     gaze_direction = "unknown"
     looking_away   = False
+    gaze_h = 0.0
+    gaze_v = 0.0
     if face_result.face_count == 1 and face_result.landmarks:
-        gaze = _gaze_analyzer.analyze_from_landmarks(face_result.landmarks)
+        gaze = _gaze_analyzer.analyze_from_landmarks(
+            face_result.landmarks,
+            baseline_h=gaze_baseline_h,
+            baseline_v=gaze_baseline_v
+        )
         gaze_direction = gaze.direction
         looking_away   = gaze.looking_away
+        gaze_h = gaze.gaze_h
+        gaze_v = gaze.gaze_v
         if gaze.violation:
             violations.append(gaze.violation)
 
@@ -159,6 +169,8 @@ async def analyze_frame(
         faces=face_result.faces,
         gaze_direction=gaze_direction,
         looking_away=looking_away,
+        gaze_h=gaze_h,
+        gaze_v=gaze_v,
         head_pitch=head_pitch,
         head_yaw=head_yaw,
         head_roll=head_roll,

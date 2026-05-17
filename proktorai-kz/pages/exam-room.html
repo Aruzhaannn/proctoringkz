@@ -216,26 +216,42 @@
     .q-nav-btn.answered { background: rgba(79,142,255,0.2); color: var(--accent); border-color: rgba(79,142,255,0.3); }
     .q-nav-btn.current  { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-    /* Камераға рұқсат сұрау модалі */
-    .permission-modal {
-      position: fixed; inset: 0; z-index: 9999;
-      background: rgba(5,8,16,0.92); backdrop-filter: blur(8px);
+    /* ======== АЛДЫН АЛА ТЕКСЕРУ ОВЕРЛЕЙІ (Рұқсат + Калибровка) ======== */
+    .pre-exam-overlay {
+      position: fixed; inset: 0; z-index: 99995;
+      background: rgba(5,8,16,0.95); backdrop-filter: blur(12px);
       display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.3s ease;
     }
-    .permission-modal.hidden { display: none; }
-    .permission-box {
+    .pre-exam-overlay.hidden { display: none; opacity: 0; }
+    .pre-exam-box {
       background: var(--surface); border: 1px solid var(--border-2);
       border-radius: 20px; padding: 40px;
-      max-width: 440px; text-align: center;
+      max-width: 480px; width: 100%; text-align: center;
       box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 40px rgba(79,142,255,0.1);
     }
-    .permission-icon { font-size: 3rem; margin-bottom: 16px; }
-    .permission-box h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; }
-    .permission-box p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 24px; }
-    .permission-list { text-align: left; background: var(--surface-2); border-radius: 10px; padding: 16px; margin-bottom: 24px; }
-    .permission-list li { font-size: 0.85rem; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border); list-style: none; display: flex; align-items: center; gap: 10px; }
-    .permission-list li:last-child { border-bottom: none; }
+    .pre-exam-box.hidden { display: none; }
+    .pre-exam-icon { font-size: 3rem; margin-bottom: 16px; }
+    .pre-exam-box h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; }
+    .pre-exam-box p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 24px; }
+    
+    .perm-list { text-align: left; background: var(--surface-2); border-radius: 10px; padding: 16px; margin-bottom: 24px; }
+    .perm-list li { font-size: 0.85rem; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border); list-style: none; display: flex; align-items: center; gap: 10px; }
+    .perm-list li:last-child { border-bottom: none; }
     .perm-error { color: #ff5050; font-size: 0.82rem; margin-top: 12px; display: none; }
+
+    .setup-camera-wrap {
+      width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px;
+      overflow: hidden; position: relative; margin-bottom: 20px; border: 2px solid var(--border-2);
+    }
+    .setup-camera-wrap video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    .setup-target {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 40px; height: 40px; border: 2px dashed rgba(255,255,255,0.7); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .setup-target::after { content: ''; width: 6px; height: 6px; background: #ff4040; border-radius: 50%; }
+    .calib-result { margin-top: 15px; font-weight: 600; font-size: 0.9rem; }
 
     /* ======== ЕСКЕРТУ ОВЕРЛЕЙІ ======== */
     .warning-overlay {
@@ -412,6 +428,8 @@
     .softlock-timer-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .softlock-timer { font-family: var(--font-display); font-size: 3.5rem; font-weight: 800; color: var(--accent-yellow); line-height: 1; }
     .softlock-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+
 
     /* ======== БЕТ АНЫҚТАЛМАДЫ — PERSISTENT OVERLAY ======== */
     .noface-overlay {
@@ -922,6 +940,9 @@
     </div>
   </div>
 
+  <!-- ======== VIOLATION TOASTS ======== -->
+  <div class="violation-toast-container" id="violationToastContainer"></div>
+
   <!-- ======== ТЕРМИНАЦИЯ ЭКРАНЫ ======== -->
   <div class="terminate-overlay hidden" id="terminateOverlay">
     <div class="terminate-icon">🚫</div>
@@ -934,22 +955,40 @@
     <div class="terminate-redirect" id="terminateRedirect">5 секундтан кейін бетке қайтарыласыз...</div>
   </div>
 
-  <!-- Камераға рұқсат сұрау модалі -->
-  <div class="permission-modal" id="permModal">
-    <div class="permission-box">
-      <div class="permission-icon">🎥</div>
-      <h2>Камераға рұқсат қажет</h2>
-      <p>ProctorAI прокторинг жүйесі емтихан барысында сізді бақылау үшін камераңызға және микрофоныңызға қол жеткізуді қажет етеді.</p>
-      <ul class="permission-list">
-        <li>📷 Камера — бет анықтау және бақылау</li>
-        <li>🎙️ Микрофон — дыбыс мониторингі</li>
-        <li>🔒 Деректер тек емтихан сессиясында пайдаланылады</li>
+  <!-- ======== АЛДЫН АЛА ТЕКСЕРУ (Рұқсат + Калибровка) ======== -->
+  <div class="pre-exam-overlay" id="preExamOverlay">
+    
+    <!-- 1-ҚАДАМ: РҰҚСАТ СҰРАУ -->
+    <div class="pre-exam-box" id="step1Perm">
+      <div class="pre-exam-icon">🎥</div>
+      <h2>Жүйені тексеру</h2>
+      <p>Емтиханды бастамас бұрын прокторинг жүйесі сіздің камераңыз бен микрофоныңызға қосылуы керек.</p>
+      <ul class="perm-list">
+        <li>📷 Камера — бетті және бағытты бақылау үшін</li>
+        <li>🎙️ Микрофон — бөгде дыбыстарды анықтау үшін</li>
       </ul>
-      <button class="btn btn-primary" style="width:100%;padding:13px;font-size:0.95rem;" onclick="requestCamera()">
-        📷 Камера мен микрофонға рұқсат беру
+      <button class="btn btn-primary" id="btnRequestCam" style="width:100%;padding:13px;font-size:0.95rem;" onclick="requestCamera()">
+        Рұқсат беру және жалғастыру
       </button>
-      <p class="perm-error" id="permError">⚠ Камераға қол жетімділік қателігі. Браузер параметрлерінен рұқсат беріңіз.</p>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:12px;">Рұқсатты кейіннен браузер параметрлерінен өзгертуге болады</p>
+      <p class="perm-error" id="permError">⚠ Қате: Камераға рұқсат берілмеді.</p>
+    </div>
+
+    <!-- 2-ҚАДАМ: КАЛИБРОВКА -->
+    <div class="pre-exam-box hidden" id="step2Calib">
+      <div class="pre-exam-icon">🎯</div>
+      <h2>Көзқарасты калибрлеу</h2>
+      <p>Камераға тіке, бейнедегі қызыл нүктеге (ортаға) қараңыз да, <strong>Снимок</strong> түймесін басыңыз.</p>
+      
+      <div class="setup-camera-wrap">
+        <!-- Бұл видео-элемент нақты камераның көшірмесін көрсетеді -->
+        <video id="setupCamera" autoplay playsinline muted></video>
+        <div class="setup-target"></div>
+      </div>
+
+      <button class="btn btn-primary" id="btnTakeSnapshot" style="width:100%;padding:13px;font-size:0.95rem;" onclick="takeCalibrationSnapshot()">
+        📸 Снимок (Калибрлеу)
+      </button>
+      <div class="calib-result" id="calibResultMsg"></div>
     </div>
   </div>
 
@@ -1269,57 +1308,65 @@
     }
   }
 
-  // ── Soft-lock overlay ─────────────────────────────────────
-  function showSoftLockOverlay(reason, duration) {
-    if (cheatEngine.hardLocked) return;
-    const overlay = document.getElementById('softlockOverlay');
-    document.getElementById('softlockMsg').textContent = reason;
-    let t = duration;
-    document.getElementById('softlockTimer').textContent = t;
-    overlay.classList.remove('hidden');
-    if (_softLockTimer) clearInterval(_softLockTimer);
-    _softLockTimer = setInterval(() => {
-      t--;
-      document.getElementById('softlockTimer').textContent = t;
-      if (t <= 0) { clearInterval(_softLockTimer); _softLockTimer = null; overlay.classList.add('hidden'); }
-    }, 1000);
+  // ── Violation Toast System (non-blocking) ────────────────
+  const _TOAST_ICONS = {
+    NO_FACE: '👤', MULTIPLE_FACES: '👥', MULTIPLE_PERSONS: '👥',
+    GAZE_AWAY: '👁️', HEAD_TURNED: '🔄', PHONE_DETECTED: '📱',
+    BOOK_DETECTED: '📖', TAB_SWITCH: '🔀', COPY_PASTE: '📋',
+    WINDOW_MINIMIZED: '🪟', VOICE_DETECTED: '🎤', MULTIPLE_VOICES: '🗣️',
+    DEFAULT: '⚠️'
+  };
+
+  function showViolationToast(title, message, level = 'warn') {
+    const container = document.getElementById('violationToastContainer');
+    if (!container) return;
+
+    // Max 4 toasts at a time
+    while (container.children.length >= 4) {
+      container.removeChild(container.firstChild);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'violation-toast ' + level;
+
+    const icon = _TOAST_ICONS[title] || _TOAST_ICONS.DEFAULT;
+    const labelTitle = (WARNING_RULES[title]?.title) || title;
+    const labelMsg = message || (WARNING_RULES[title]?.msg) || '';
+
+    toast.innerHTML = `
+      <span class="violation-toast-icon">${icon}</span>
+      <div class="violation-toast-text">
+        <strong>${labelTitle}</strong>
+        ${labelMsg ? '<small>' + labelMsg + '</small>' : ''}
+      </div>
+      <button class="violation-toast-close" onclick="this.parentElement.remove()">✕</button>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      setTimeout(() => toast.remove(), 350);
+    }, 5000);
   }
 
-  // ── Warning overlay (high risk, AI explanation) ───────────
+  // ── Soft-lock → Toast (no blocking) ─────────────────────
+  function showSoftLockOverlay(reason, duration) {
+    showViolationToast('DEFAULT', reason, 'warn');
+  }
+
+  // ── Risk warning → Toast (no blocking) ──────────────────
   function showRiskWarning() {
-    if (warningActive || cheatEngine.hardLocked) return;
-    warningActive = true;
-    const lastV  = cheatEngine.violationHistory.at(-1);
-    const info   = WARNING_RULES[lastV?.type] || { title:'Жоғары қауіп!', msg:'Күмәнді әрекет анықталды.', rule:'⚠️ Ереже: Емтихан тәртібін сақтаңыз.' };
-    const count  = Math.min(cheatEngine.softLockCount, 3);
-    for (let i = 1; i <= 3; i++) document.getElementById('wDot'+i)?.classList.toggle('active', i <= count);
-    document.getElementById('warnTitle').textContent   = `Ескерту ${count} — ${info.title}`;
-    document.getElementById('warnMessage').textContent = info.msg;
-    document.getElementById('warnRule').textContent    = info.rule;
-    document.getElementById('warnBtn').style.display   = 'block';
-
-    const explanation = cheatEngine.explainCurrent();
-    const aiSect = document.getElementById('warnAiExplain');
-    const aiText = document.getElementById('warnAiExplainText');
-    if (aiSect && aiText) { aiSect.style.display = ''; aiText.textContent = explanation; }
-
-    document.getElementById('warningOverlay').classList.remove('hidden');
-    addLog(`🚨 Ескерту: ${info.title}`, 'warn');
-
-    let remaining = 15;
-    document.getElementById('warnCountdown').textContent = `${remaining} секундтан кейін автоматты жабылады`;
-    if (warnDismissTimer) clearInterval(warnDismissTimer);
-    warnDismissTimer = setInterval(() => {
-      remaining--;
-      const el = document.getElementById('warnCountdown');
-      if (el) el.textContent = `${remaining} секундтан кейін автоматты жабылады`;
-      if (remaining <= 0) dismissWarning();
-    }, 1000);
+    const lastV = cheatEngine.violationHistory.at(-1);
+    const info = WARNING_RULES[lastV?.type] || { title: 'Жоғары қауіп', msg: 'Күмәнді әрекет анықталды.' };
+    showViolationToast(lastV?.type || 'DEFAULT', info.msg, cheatEngine.riskScore >= 60 ? 'critical' : 'warn');
+    // Send to teacher
+    showTeacherToast(cheatEngine.riskScore, info.title + ' — ' + info.msg);
   }
 
   function dismissWarning() {
-    if (warnDismissTimer) { clearInterval(warnDismissTimer); warnDismissTimer = null; }
-    document.getElementById('warningOverlay').classList.add('hidden');
+    // No overlay to dismiss anymore — toasts auto-dismiss
     warningActive = false;
   }
 
@@ -1525,59 +1572,102 @@
   let aiFrameInterval = null;
 
   async function requestCamera() {
-    document.getElementById('permModal').classList.add('hidden');
-    await startCamera();
-  }
-
-  async function startCamera() {
     try {
       cameraStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
         audio: true
       });
-      const video = document.getElementById('realCamera');
-      video.srcObject = cameraStream;
-      video.onloadedmetadata = () => {
-        video.play();
-        document.getElementById('camPlaceholder').classList.add('hidden');
-        document.getElementById('activeScanLine').style.display = 'block';
-        document.getElementById('camStatus').textContent = 'Қосылды ✓';
-        document.getElementById('camStatus').style.color = 'var(--accent-green)';
-        document.getElementById('faceStatus').textContent = 'Бет іздеуде...';
-        document.getElementById('faceStatus').className = 'cam-face-status loading';
-        addLog('Камера сәтті қосылды', 'ok');
-        evidenceCollector = new EvidenceCollector(video);
-        evidenceCollector.startBuffer(cameraStream);
-        startFaceSimulation();
-        startMicMonitor();
-        startScreenRecording(cameraStream);
-        if (!aiFrameInterval) aiFrameInterval = setInterval(sendFrameToAI, 3000);
-      };
+      // 1. Успешно получили права - переходим на шаг 2 (Калибровка)
+      document.getElementById('step1Perm').classList.add('hidden');
+      document.getElementById('step2Calib').classList.remove('hidden');
+      
+      // 2. Показываем видео в модалке настройки
+      const setupVideo = document.getElementById('setupCamera');
+      setupVideo.srcObject = cameraStream;
+      setupVideo.play();
     } catch (err) {
-      handleCameraError(err);
+      document.getElementById('permError').style.display = 'block';
+      console.error(err);
     }
   }
 
-  function handleCameraError(err) {
-    const msg = err.name === 'NotAllowedError'
-      ? 'Камераға рұқсат берілмеді'
-      : err.name === 'NotFoundError'
-      ? 'Камера табылмады'
-      : 'Камера қателігі: ' + err.message;
+  // ============================================================
+  // КАЛИБРОВКА (КӨЗҚАРАС)
+  // ============================================================
+  window.gazeBaselineH = 0.0;
+  window.gazeBaselineV = 0.0;
 
-    document.getElementById('camLoadMsg').textContent = '⚠ ' + msg;
-    document.getElementById('camLoadMsg').style.color = '#ff5050';
-    document.getElementById('camPlaceholder').classList.remove('hidden');
-    document.getElementById('camStatus').textContent = 'Қате ❌';
-    document.getElementById('camStatus').style.color = '#ff5050';
-    document.getElementById('faceStatus').textContent = 'Камера жоқ';
-    document.getElementById('faceStatus').className = 'cam-face-status bad';
-    document.getElementById('permError').style.display = 'block';
-    document.getElementById('permModal').classList.remove('hidden');
-    addLog('⚠ ' + msg, 'warn');
+  async function takeCalibrationSnapshot() {
+    const btn = document.getElementById('btnTakeSnapshot');
+    const msg = document.getElementById('calibResultMsg');
+    btn.disabled = true;
+    btn.textContent = '⏳ Өңделуде...';
+    
+    const video = document.getElementById('setupCamera');
+    if (!video || video.readyState < 2) {
+      msg.style.color = '#ff4040'; msg.textContent = 'Камера қосылмаған!';
+      btn.disabled = false; btn.textContent = '📸 Снимок (Калибрлеу)';
+      return;
+    }
+    
+    canvas.width = 640; canvas.height = 480;
+    canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+    
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        const res = await AiAPI.analyzeFrame(currentSessionId || 'demo', blob, { gazeBaselineH: 0, gazeBaselineV: 0 });
+        if (res && res.face_count === 1) {
+          window.gazeBaselineH = res.gaze_h || 0;
+          window.gazeBaselineV = res.gaze_v || 0;
+          
+          msg.style.color = 'var(--accent-green)';
+          msg.textContent = '✅ Сәтті сақталды!';
+          
+          // Калибровка сәтті - емтиханды бастау
+          setTimeout(() => {
+            document.getElementById('preExamOverlay').classList.add('hidden');
+            startExamAfterSetup();
+          }, 1000);
+        } else {
+          msg.style.color = '#ff4040';
+          msg.textContent = 'Бет анықталмады. Қайта көріңіз.';
+          btn.disabled = false; btn.textContent = '📸 Снимок (Калибрлеу)';
+        }
+      } catch (err) {
+        msg.style.color = '#ff4040';
+        msg.textContent = 'AI қателігі. Қайта көріңіз.';
+        btn.disabled = false; btn.textContent = '📸 Снимок (Калибрлеу)';
+      }
+    });
   }
 
-  let faceAwayCount = 0;
+  // ============================================================
+  // ЕМТИХАНДЫ БАСТАУ (Калибровкадан кейін)
+  // ============================================================
+  function startExamAfterSetup() {
+    const video = document.getElementById('realCamera');
+    video.srcObject = cameraStream;
+    video.onloadedmetadata = () => {
+      video.play();
+      document.getElementById('camPlaceholder').classList.add('hidden');
+      document.getElementById('activeScanLine').style.display = 'block';
+      document.getElementById('camStatus').textContent = 'Қосылды ✓';
+      document.getElementById('camStatus').style.color = 'var(--accent-green)';
+      document.getElementById('faceStatus').textContent = 'Бет іздеуде...';
+      document.getElementById('faceStatus').className = 'cam-face-status loading';
+      addLog('Камера мен калибровка сәтті аяқталды', 'ok');
+      
+      evidenceCollector = new EvidenceCollector(video);
+      evidenceCollector.startBuffer(cameraStream);
+      startFaceSimulation();
+      startMicMonitor();
+      startScreenRecording(cameraStream);
+      
+      initExamSession(); // Бэкэндте сессияны енді бастаймыз
+      if (!aiFrameInterval) aiFrameInterval = setInterval(sendFrameToAI, 3000);
+    };
+  }
 
   function startFaceSimulation() {
     const video     = document.getElementById('realCamera');
@@ -1679,14 +1769,18 @@
     _phoneLocked = true;
     _lastPhoneSpeechTime = 0;
     playBeepAlert('phone');
-    showPhoneAlertBanner();
+    // Toast instead of blocking overlay
+    showViolationToast('PHONE_DETECTED', 'Телефон анықталды — мұғалімге хабарлама жіберілді', 'critical');
     addLog('🚨 ТЕЛЕФОН АНЫҚТАЛДЫ — Мұғалімге жіберілуде...', 'warn');
     AuditAPI.log('PHONE_DETECTED', currentSessionId, 'Телефон анықталды. ' + new Date().toISOString());
     if (evidenceCollector) {
       const entry = evidenceCollector.record('PHONE_DETECTED', 95, 'critical', 'Телефон анықталды');
       if (entry) addEvidenceEntry(entry);
     }
-    sendViolationToTeacher('PHONE_DETECTED', 95, 'critical', 'Телефон немесе сотка анықталды — немедленно тоқтату');
+    // Notify teacher
+    showTeacherToast(cheatEngine.riskScore, 'Телефон анықталды — камерада электрондық құрылғы бар');
+    // Reset phone lock after 10 seconds so it can detect again
+    setTimeout(() => { _phoneLocked = false; }, 10000);
   }
 
   function unlockFromPhoneLock() {
@@ -1699,9 +1793,8 @@
 
   async function checkCameraAvailability() {
     if (!navigator.mediaDevices?.getUserMedia) {
-      document.getElementById('camLoadMsg').textContent = '⚠ Браузер камераны қолдамайды';
+      document.getElementById('permError').style.display = 'block';
     }
-    document.getElementById('permModal').classList.remove('hidden');
   }
 
   // ============================================================
@@ -2245,7 +2338,13 @@
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       try {
-        const result = await AiAPI.analyzeFrame(sessionId, blob);
+        const result = await AiAPI.analyzeFrame(sessionId, blob, {
+          tabSwitches: cheatTabCount,
+          copyPasteCount: cheatPasteCount,
+          windowMinimized: _tabWarningActive ? 1 : 0,
+          gazeBaselineH: window.gazeBaselineH,
+          gazeBaselineV: window.gazeBaselineV
+        });
         if (!result) {
           console.warn('[ProctorAI] AI returned null — service may be down');
           return;
@@ -2264,32 +2363,23 @@
           risk: result.risk_level
         });
 
-        // ── Face status + persistent no-face lock ─────────────
-        const nofaceOverlay = document.getElementById('nofaceOverlay');
+        // ── Face status (non-blocking toasts) ─────────────────
         if (result.face_count === 0) {
           document.getElementById('faceStatus').textContent = 'Бет табылмады ❌';
           document.getElementById('faceStatus').className = 'cam-face-status bad';
           document.getElementById('faceBox').classList.remove('visible');
-          if (!cheatEngine.hardLocked && !_phoneLocked) {
-            nofaceOverlay.classList.remove('hidden');
-            speakFaceAlert();
-            startNofaceCountdown();
-          }
+          showViolationToast('NO_FACE', 'Камерада бет анықталмады', 'critical');
           stopGazeTimer();
         } else if (result.face_count > 1) {
           document.getElementById('faceStatus').textContent = 'Бірнеше адам! ⚠';
           document.getElementById('faceStatus').className = 'cam-face-status bad';
           document.getElementById('faceBox').classList.add('visible');
           document.getElementById('faceBox').style.borderColor = '#ff5050';
-          nofaceOverlay.classList.add('hidden');
-          stopNofaceCountdown();
         } else {
           document.getElementById('faceStatus').textContent = 'Бет анықталды ✓';
           document.getElementById('faceStatus').className = 'cam-face-status ok';
           document.getElementById('faceBox').classList.add('visible');
           document.getElementById('faceBox').style.borderColor = 'var(--accent-green)';
-          nofaceOverlay.classList.add('hidden');
-          stopNofaceCountdown();
         }
 
         // ── Gaze tracking ─────────────────────────────────────
@@ -2326,28 +2416,23 @@
           addLog('🤖 AI: ' + violationLabel(v), 'warn');
           cheatEngine.addEvent(v, { source: 'ai', gaze: result.gaze_direction });
 
-          // Phone detected → instant lock + alert teacher
-          if (v === 'PHONE_DETECTED') {
-            console.warn('[ProctorAI] PHONE DETECTED — triggering lock!');
-            triggerPhoneLock();
+          // Show toast for every violation (non-blocking)
+          const level = ['PHONE_DETECTED','MULTIPLE_FACES','MULTIPLE_PERSONS','NO_FACE'].includes(v) ? 'critical' : 'warn';
+          showViolationToast(v, null, level);
+
+          // Notify teacher for serious violations
+          if (['PHONE_DETECTED','MULTIPLE_FACES','MULTIPLE_PERSONS','NO_FACE','BOOK_DETECTED'].includes(v)) {
+            showTeacherToast(cheatEngine.riskScore, violationLabel(v));
           }
-          // Multiple persons → audio alert + teacher alert
-          if (v === 'MULTIPLE_PERSONS' || v === 'MULTIPLE_FACES') {
-            const now = Date.now();
-            speakMultiPersonAlert();
-            if (now - _lastMultiPersonAlert > 20000) {
-              _lastMultiPersonAlert = now;
-              showTeacherToast(cheatEngine.riskScore, 'Студент жанында бөгде адам анықталды! Камера: ' + v);
-              if (evidenceCollector) {
-                const entry = evidenceCollector.record(v, cheatEngine.riskScore, 'high', 'Бөлмеде бөгде адам анықталды');
-                if (entry) addEvidenceEntry(entry);
-              }
-            }
+
+          // Phone detected → log + toast (already handled above)
+          if (v === 'PHONE_DETECTED') {
+            console.warn('[ProctorAI] PHONE DETECTED!');
+            triggerPhoneLock();
           }
         }
         if (result.final_decision === 'terminate') {
-          // Don't auto-terminate — just log and warn
-          addLog('🔴 AI: Критикалық қауіп деңгейі анықталды', 'warn');
+          showViolationToast('DEFAULT', 'Критикалық қауіп деңгейі анықталды', 'critical');
         }
       } catch (e) {
         console.error('[ProctorAI] AI frame error:', e.message, e);
@@ -2390,7 +2475,6 @@
 
   checkCameraAvailability();
   Auth.check();
-  initExamSession();
   </script>
 
   <!-- ======== ДӘЛЕЛ СУРЕТІН ҮЛКЕЙТУ МОДАЛІ ======== -->

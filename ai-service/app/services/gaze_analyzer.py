@@ -7,6 +7,8 @@ class GazeResult:
     looking_away: bool
     direction: str  # "center", "left", "right", "up", "down", "unknown"
     violation: str | None
+    gaze_h: float = 0.0
+    gaze_v: float = 0.0
 
 
 # MediaPipe FaceMesh landmark indices for iris + eye corners
@@ -25,12 +27,14 @@ _VERTICAL_THRESHOLD   = 0.25    # ratio offset from center → looking up/down
 class GazeAnalyzer:
     """Iris-based gaze estimation using MediaPipe FaceMesh landmarks (468+10)."""
 
-    def analyze_from_landmarks(self, landmarks: list[list]) -> GazeResult:
+    def analyze_from_landmarks(self, landmarks: list[list], baseline_h: float = 0.0, baseline_v: float = 0.0) -> GazeResult:
         """
         Analyze gaze direction from MediaPipe FaceMesh landmarks.
 
         Args:
             landmarks: list of [x, y, z] for each of 478 landmarks
+            baseline_h: horizontal calibration offset
+            baseline_v: vertical calibration offset
 
         Returns:
             GazeResult with direction and violation info
@@ -77,6 +81,13 @@ class GazeAnalyzer:
             # ── Average both eyes ─────────────────────────────────────
             avg_h = (l_ratio_h + r_ratio_h) / 2
             avg_v = (l_ratio_v + r_ratio_v) / 2
+            
+            raw_h = avg_h
+            raw_v = avg_v
+            
+            # Apply calibration baselines
+            avg_h -= baseline_h
+            avg_v -= baseline_v
 
             # ── Determine direction ───────────────────────────────────
             direction = "center"
@@ -103,7 +114,9 @@ class GazeAnalyzer:
             return GazeResult(
                 looking_away=looking_away,
                 direction=direction,
-                violation=violation
+                violation=violation,
+                gaze_h=raw_h,
+                gaze_v=raw_v
             )
 
         except (IndexError, TypeError, ZeroDivisionError):

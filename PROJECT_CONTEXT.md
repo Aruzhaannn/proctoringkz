@@ -111,8 +111,8 @@ proctoringkz/
 │               └── SessionConsumer.java     # Получение SessionEvent
 │
 ├── ai-service/                   # Python FastAPI + MediaPipe + YOLOv8
-│   ├── Dockerfile                # python:3.12-slim
-│   ├── requirements.txt          # fastapi, uvicorn, opencv, mediapipe, ultralytics(YOLOv8), librosa
+│   ├── Dockerfile                # python:3.11-slim
+│   ├── requirements.txt          # fastapi, uvicorn, opencv, mediapipe==0.10.14, numpy<2.0.0, ultralytics(YOLOv8)
 │   ├── yolov8n.pt                # Предобученная модель YOLOv8 nano
 │   ├── face_detection_test.py
 │   └── app/
@@ -125,7 +125,7 @@ proctoringkz/
 │           ├── face_detector.py       # MediaPipe Face Detection + FaceMesh (478 landmarks, max 5 faces)
 │           ├── gaze_analyzer.py       # Iris-based gaze (landmarks 468-477: left/right/up/down/diagonal)
 │           ├── head_pose_estimator.py # solvePnP head pose from FaceMesh (pitch/yaw/roll, порог 20°)
-│           ├── object_detector.py     # YOLOv8 (conf=0.25, classes: cell phone, remote, book, laptop)
+│           ├── object_detector.py     # YOLOv8 (conf=0.25 для телефонов, conf=0.45 для людей)
 │           └── audio_detector.py      # Анализ аудио (librosa, VAD)
 │
 ├── proktorai-kz/                 # Фронтенд — статический HTML/CSS/JS
@@ -315,7 +315,8 @@ AiAPI    — analyzeFrame(sessionId, blob, counters), analyzeAudio(sessionId, bl
   - Телефон, книга (YOLOv8)
   - Направление взгляда (iris-based)
   - Поворот головы (solvePnP)
-- **3-strike система:** 3 предупреждения → автоматическая терминация экзамена
+- **Уведомления (Toasts):** Все нарушения (потеря лица, телефон, вкладки) выводятся через неблокирующие всплывающие уведомления (toasts) внизу экрана, не прерывая работу.
+- **Отсутствие авто-терминации:** Система только предупреждает студента и отправляет логи/уведомления преподавателю. Решение о завершении экзамена принимает только преподаватель.
 - **AI-анализ кадров:** Каждые 3 сек отправка кадра 640×480 на AI-service (работает и без backend session)
 - **Таймер обратного отсчёта**
 
@@ -359,7 +360,7 @@ MULTIPLE_VOICES, VOICE_DETECTED
 |-------------|-----------|
 | Frontend     | HTML5, CSS3, Vanilla JS, Google Fonts (Syne + DM Sans) |
 | Backend      | Java 21, Spring Boot 3.3.0, Spring Security, Spring Data JPA, Spring Kafka |
-| AI Service   | Python 3.12, FastAPI, OpenCV, **MediaPipe** (Face Detection + FaceMesh 478 lm + iris), **YOLOv8** (ultralytics, conf=0.25), librosa |
+| AI Service   | Python 3.11, FastAPI, OpenCV, **MediaPipe** (v0.10.14), **YOLOv8** (ultralytics, conf=0.25/0.45) |
 | Database     | PostgreSQL 17 (Alpine) |
 | Cache        | Redis 7 (Alpine) |
 | Messaging    | Apache Kafka 3.7.0 |
@@ -401,8 +402,9 @@ cd ai-service && pip install -r requirements.txt && uvicorn app.main:app --port 
 ### БД создаётся автоматически
 PostgreSQL контейнер создаёт БД `proctoring_db` через `POSTGRES_DB`. Spring Boot создаёт таблицы через JPA `ddl-auto: update`. `DataInitializer` создаёт 3 демо-аккаунта.
 
-### CORS (для локальной разработки)
-Разрешены origins: `localhost:3000`, `localhost:8080`, `127.0.0.1:5500`, `localhost:5500`, `127.0.0.1:5173`, `localhost:5173`, `null`
+### CORS и Nginx (для локальной разработки)
+Разрешены origins: `http://localhost`, `http://localhost:80`, `localhost:3000`, `localhost:8080`, `localhost:9090`, `127.0.0.1:5500`, `localhost:5500`, `127.0.0.1:5173`, `localhost:5173`, `null`.
+Nginx настроен с `client_max_body_size 10m` для передачи изображений с камеры.
 
 ---
 
