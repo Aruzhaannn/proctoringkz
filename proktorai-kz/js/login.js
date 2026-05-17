@@ -35,6 +35,13 @@ function showError(msg) {
   el.textContent = msg;
 }
 
+// Demo credentials (работают без backend)
+const DEMO_USERS = {
+  'student@demo.kz':  { password: 'demo123', role: 'STUDENT',  fullName: 'Айгерім Студент',  userId: 1 },
+  'teacher@demo.kz':  { password: 'demo123', role: 'TEACHER',  fullName: 'Алмас Оқытушы',    userId: 2 },
+  'admin@demo.kz':    { password: 'demo123', role: 'ADMIN',    fullName: 'Нұрлан Әкімші',    userId: 3 },
+};
+
 document.getElementById('loginForm').addEventListener('submit', async function (e) {
   e.preventDefault();
 
@@ -46,6 +53,14 @@ document.getElementById('loginForm').addEventListener('submit', async function (
 
   btn.innerHTML  = '<span class="btn-text">Кірілуде...</span>';
   btn.disabled   = true;
+
+  // Demo mode bypass
+  const demo = DEMO_USERS[emailVal.toLowerCase()];
+  if (demo && demo.password === passVal) {
+    Auth.save({ accessToken: 'demo-token', refreshToken: 'demo-refresh', userId: demo.userId, email: emailVal, fullName: demo.fullName, role: demo.role });
+    redirectByRole(demo.role);
+    return;
+  }
 
   try {
     const data = await AuthAPI.login(emailVal, passVal);

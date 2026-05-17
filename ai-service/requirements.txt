@@ -12,13 +12,7 @@ Pillow>=10.4.0
 # Object detection — YOLOv8 (installs torch automatically)
 ultralytics>=8.3.0
 
-# Face mesh + head pose estimation
-mediapipe>=0.10.30
-
 # Audio analysis
 librosa>=0.10.2
 soundfile>=0.12.1
 scipy>=1.13.0
-
-# Deep learning — TensorFlow (Python 3.11 only)
-tensorflow>=2.16.0

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   # ── Infrastructure ─────────────────────────────────────────
@@ -55,10 +53,11 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   # ── Application Services ───────────────────────────────────
   backend:
@@ -68,7 +67,7 @@ services:
     container_name: proktorai-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "9090:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/proctoring_db
       SPRING_DATASOURCE_USERNAME: postgres
@@ -81,6 +80,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]

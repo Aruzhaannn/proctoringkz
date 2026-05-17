@@ -30,6 +30,26 @@ _WEIGHTS: dict[str, int] = {
     "BOOK_DETECTED":     40,
     "VOICE_DETECTED":    30,
     "MULTIPLE_VOICES":   50,
+    "TAB_SWITCH":         8,
+    "COPY_PASTE":         5,
+    "WINDOW_MINIMIZED":  30,
+}
+
+_EVENT_LABELS: dict[str, str] = {
+    "NO_FACE":          "Бет табылмады — студент жоқ немесе камерадан кетті",
+    "MULTIPLE_FACES":   "Бірнеше бет анықталды — бөгде адам бар",
+    "PERSON_ABSENT":    "Адам кадрда жоқ",
+    "MULTIPLE_PERSONS": "Бірнеше адам анықталды",
+    "GAZE_AWAY":        "Көз экраннан басқа жаққа бұрылды",
+    "HEAD_TURNED":      "Бас экраннан бұрылды",
+    "HEAD_NOT_DETECTED":"Бас позициясы анықталмады",
+    "PHONE_DETECTED":   "Телефон анықталды",
+    "BOOK_DETECTED":    "Кітап немесе шпаргалка анықталды",
+    "VOICE_DETECTED":   "Сырттан дауыс естілді",
+    "MULTIPLE_VOICES":  "Бірнеше адамның дауысы анықталды",
+    "TAB_SWITCH":       "Браузер қойындысы ауыстырылды",
+    "COPY_PASTE":       "Ctrl+C/V басылды",
+    "WINDOW_MINIMIZED": "Браузер терезесі жасырылды",
 }
 
 
@@ -37,10 +57,41 @@ def _cheat_score(violations: list[str]) -> int:
     return min(sum(_WEIGHTS.get(v, 10) for v in violations), 100)
 
 
+def _risk_level(score: int) -> str:
+    if score <= 20:
+        return "low"
+    if score <= 50:
+        return "medium"
+    if score <= 80:
+        return "high"
+    return "critical"
+
+
+def _final_decision(score: int) -> str:
+    if score <= 20:
+        return "allow"
+    if score <= 50:
+        return "warn"
+    if score <= 80:
+        return "flag"
+    return "terminate"
+
+
+def _explanation(violations: list[str], score: int) -> str:
+    if not violations:
+        return "Подозрительная активность не обнаружена. Поведение студента в норме."
+    labels = [_EVENT_LABELS.get(v, v) for v in violations[:3]]
+    suffix = f" Итоговый балл риска: {score}/100."
+    return "Обнаружено: " + "; ".join(labels) + "." + suffix
+
+
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_frame(
     session_id: str = Form(...),
     frame: UploadFile = File(...),
+    tab_switches: int = Form(0),
+    copy_paste_count: int = Form(0),
+    window_minimized: int = Form(0),
 ):
     data = await frame.read()
     arr = np.frombuffer(data, np.uint8)
@@ -73,8 +124,18 @@ async def analyze_frame(
     obj = _object_detector.detect(image)
     violations.extend(obj.violations)
 
-    score   = _cheat_score(violations)
-    message = "OK" if not violations else ", ".join(violations)
+    # ── 4. Browser activity ────────────────────────────────────────────────
+    violations.extend(["TAB_SWITCH"] * tab_switches)
+    violations.extend(["COPY_PASTE"] * copy_paste_count)
+    if window_minimized:
+        violations.extend(["WINDOW_MINIMIZED"] * window_minimized)
+
+    score    = _cheat_score(violations)
+    risk     = _risk_level(score)
+    decision = _final_decision(score)
+    events   = [_EVENT_LABELS.get(v, v) for v in dict.fromkeys(violations)]
+    explain  = _explanation(list(dict.fromkeys(violations)), score)
+    message  = "OK" if not violations else ", ".join(dict.fromkeys(violations))
 
     return AnalyzeResponse(
         exam_session_id=session_id,
@@ -88,8 +149,12 @@ async def analyze_frame(
         head_turned=head.looking_away,
         persons_detected=obj.persons_detected,
         detected_objects=obj.objects,
-        violations=violations,
+        violations=list(dict.fromkeys(violations)),
         cheat_score=score,
+        risk_level=risk,
+        detected_events=events,
+        final_decision=decision,
+        explanation=explain,
         message=message,
     )
 

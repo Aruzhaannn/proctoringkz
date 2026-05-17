@@ -231,10 +231,142 @@
     .permission-list li { font-size: 0.85rem; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border); list-style: none; display: flex; align-items: center; gap: 10px; }
     .permission-list li:last-child { border-bottom: none; }
     .perm-error { color: #ff5050; font-size: 0.82rem; margin-top: 12px; display: none; }
+
+    /* ======== ЕСКЕРТУ ОВЕРЛЕЙІ ======== */
+    .warning-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(5,8,16,0.88); backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: center;
+      animation: overlayFadeIn 0.25s ease;
+    }
+    .warning-overlay.hidden { display: none; }
+    @keyframes overlayFadeIn { from { opacity:0; transform:scale(0.97); } to { opacity:1; transform:scale(1); } }
+
+    .warning-box {
+      background: linear-gradient(145deg, #1a0a0a, #120808);
+      border: 2px solid #ff4040;
+      border-radius: 20px; padding: 44px 40px; max-width: 500px; width: 90%;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(255,50,50,0.3), 0 8px 40px rgba(0,0,0,0.7);
+      animation: warningPulse 0.4s ease;
+    }
+    @keyframes warningPulse { 0%{transform:scale(0.9)} 60%{transform:scale(1.03)} 100%{transform:scale(1)} }
+
+    .warning-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,64,64,0.15); border: 1px solid rgba(255,64,64,0.4);
+      border-radius: 20px; padding: 6px 16px; margin-bottom: 20px;
+      font-size: 0.78rem; font-weight: 700; color: #ff6060;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .warning-counter-dots {
+      display: flex; justify-content: center; gap: 10px; margin-bottom: 24px;
+    }
+    .w-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid rgba(255,64,64,0.4);
+      background: transparent; transition: all 0.3s ease;
+    }
+    .w-dot.active { background: #ff4040; border-color: #ff4040; box-shadow: 0 0 10px rgba(255,64,64,0.6); }
+
+    .warning-icon { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+    .warning-title {
+      font-family: var(--font-display); font-size: 1.5rem; font-weight: 800;
+      color: #ff5050; margin-bottom: 12px;
+    }
+    .warning-message {
+      font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .warning-rule {
+      background: rgba(255,64,64,0.08); border: 1px solid rgba(255,64,64,0.2);
+      border-radius: 10px; padding: 14px 18px; margin-bottom: 24px;
+      font-size: 0.85rem; color: #ff8080; text-align: left; line-height: 1.5;
+    }
+    .warning-btn {
+      background: linear-gradient(135deg, #c0392b, #e74c3c);
+      color: #fff; border: none; border-radius: 12px;
+      padding: 14px 36px; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; width: 100%; transition: all 0.2s ease;
+    }
+    .warning-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(231,76,60,0.4); }
+
+    .warning-countdown {
+      font-size: 0.75rem; color: var(--text-muted); margin-top: 12px;
+    }
+
+    /* ======== ТЕРМИНАЦИЯ ЭКРАНЫ ======== */
+    .terminate-overlay {
+      position: fixed; inset: 0; z-index: 999999;
+      background: #050810;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 24px;
+      animation: overlayFadeIn 0.4s ease;
+    }
+    .terminate-overlay.hidden { display: none; }
+    .terminate-icon { font-size: 5rem; animation: shake 0.5s ease; }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)}
+      40%{transform:translateX(10px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)}
+    }
+    .terminate-title {
+      font-family: var(--font-display); font-size: 2rem; font-weight: 800;
+      color: #ff3333; text-align: center; line-height: 1.3;
+    }
+    .terminate-sub {
+      font-size: 1rem; color: var(--text-secondary); text-align: center; max-width: 480px; line-height: 1.6;
+    }
+    .terminate-violations {
+      background: rgba(255,50,50,0.08); border: 1px solid rgba(255,50,50,0.2);
+      border-radius: 14px; padding: 20px 28px; max-width: 480px; width: 90%;
+    }
+    .terminate-violations li {
+      font-size: 0.85rem; color: #ff8080; padding: 6px 0;
+      border-bottom: 1px solid rgba(255,50,50,0.15); list-style: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .terminate-violations li:last-child { border-bottom: none; }
+    .terminate-redirect {
+      font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;
+    }
   </style>
 </head>
 <body>
   <div class="grid-bg"></div>
+
+  <!-- ======== ЕСКЕРТУ ОВЕРЛЕЙІ ======== -->
+  <div class="warning-overlay hidden" id="warningOverlay">
+    <div class="warning-box">
+      <div class="warning-badge">
+        <span>⚠</span> <span>ЕСКЕРТУ</span>
+      </div>
+      <div class="warning-counter-dots">
+        <div class="w-dot" id="wDot1"></div>
+        <div class="w-dot" id="wDot2"></div>
+        <div class="w-dot" id="wDot3"></div>
+      </div>
+      <span class="warning-icon">🚨</span>
+      <div class="warning-title" id="warnTitle">Ереже бұзылды!</div>
+      <div class="warning-message" id="warnMessage">Сіздің әрекетіңіз емтихан ережелерін бұзады.</div>
+      <div class="warning-rule" id="warnRule"></div>
+      <button class="warning-btn" id="warnBtn" onclick="dismissWarning()">
+        Түсіндім, емтиханды жалғастырамын
+      </button>
+      <div class="warning-countdown" id="warnCountdown"></div>
+    </div>
+  </div>
+
+  <!-- ======== ТЕРМИНАЦИЯ ЭКРАНЫ ======== -->
+  <div class="terminate-overlay hidden" id="terminateOverlay">
+    <div class="terminate-icon">🚫</div>
+    <div class="terminate-title">Емтихан тоқтатылды</div>
+    <div class="terminate-sub">
+      Сіз 3 рет ереже бұздыңыз. ProctorAI жүйесі сіздің емтиханыңызды автоматты түрде тоқтатты.
+      Оқытушыға хабарлама жіберілді.
+    </div>
+    <ul class="terminate-violations" id="terminateViolations"></ul>
+    <div class="terminate-redirect" id="terminateRedirect">5 секундтан кейін бетке қайтарыласыз...</div>
+  </div>
 
   <!-- Камераға рұқсат сұрау модалі -->
   <div class="permission-modal" id="permModal">
@@ -432,12 +564,130 @@
 
   <script>
   // ============================================================
+  // ЕСКЕРТУ ЖҮЙЕСІ — 3 ескертуден кейін емтихан тоқтатылады
+  // ============================================================
+  const WARNING_RULES = {
+    NO_FACE:          { title: 'Бет анықталмады!',        msg: 'Камера алдынан кетпеңіз. Емтихан барысында бетіңіз камерада көрінуі тиіс.', rule: '📷 Ереже: Студент емтихан барысында камера алдынан кетпеуі керек.' },
+    MULTIPLE_FACES:   { title: 'Бірнеше адам анықталды!', msg: 'Жаныңызда бөгде адамның болуы қатаң тыйым салынады.',                        rule: '👥 Ереже: Емтихан бөлмесінде тек студенттің өзі болуы тиіс.' },
+    MULTIPLE_PERSONS: { title: 'Бірнеше адам анықталды!', msg: 'Жаныңызда бөгде адамның болуы қатаң тыйым салынады.',                        rule: '👥 Ереже: Емтихан бөлмесінде тек студенттің өзі болуы тиіс.' },
+    PERSON_ABSENT:    { title: 'Экраннан кеттіңіз!',      msg: 'Емтихан барысында жұмыс орныңызды тастап кетуге болмайды.',                   rule: '🪑 Ереже: Студент емтихан аяқталғанша жұмыс орнында болуы тиіс.' },
+    GAZE_AWAY:        { title: 'Басқа жаққа қарадыңыз!',  msg: '3 секундтан артық экраннан алыс қарадыңыз. Назарыңызды экранға бағыттаңыз.', rule: '👁️ Ереже: Студент емтихан барысында экранға қарап отыруы тиіс.' },
+    HEAD_TURNED:      { title: 'Бас экраннан бұрылды!',   msg: 'Басыңыз экраннан бұрылды. Тікелей экранға қарап отырыңыз.',                  rule: '↩️ Ереже: Бастың экраннан 30° астам бұрылуы тыйым салынады.' },
+    PHONE_DETECTED:   { title: 'Телефон анықталды!',      msg: 'Кадрда телефон байқалды. Барлық электрондық құрылғылар жинап қойылуы тиіс.', rule: '📵 Ереже: Емтихан кезінде телефон пайдалану қатаң тыйым салынады.' },
+    BOOK_DETECTED:    { title: 'Кітап/шпаргалка анықталды!', msg: 'Кадрда кітап немесе жазу материалы байқалды.',                            rule: '📚 Ереже: Кітап, дәптер, шпаргалка пайдалануға болмайды.' },
+    TAB_SWITCH:       { title: 'Браузер қойындысы ауыстырылды!', msg: 'Сіз басқа браузер беттеріне өттіңіз. Тек емтихан беті ашық болуы тиіс.', rule: '🖥️ Ереже: Емтихан барысында басқа сайттарға кіруге болмайды.' },
+    COPY_PASTE:       { title: 'Көшіру/қою анықталды!',   msg: 'Ctrl+C немесе Ctrl+V пернелері басылды. Бұл емтиханда тыйым салынады.',       rule: '⌨️ Ереже: Мәтін көшіру және қою операциялары тыйым салынады.' },
+    WINDOW_MINIMIZED: { title: 'Браузер жасырылды!',      msg: 'Браузер терезесі жинақталды немесе жасырылды.',                               rule: '🔲 Ереже: Емтихан терезесі толық ашық болуы тиіс.' },
+    MULTIPLE_VOICES:  { title: 'Бірнеше дауыс анықталды!', msg: 'Микрофонда бірнеше адамның дауысы естілді.',                                 rule: '🔇 Ереже: Емтихан кезінде бөгде адаммен сөйлесуге болмайды.' },
+    VOICE_DETECTED:   { title: 'Бөгде дауыс анықталды!',  msg: 'Микрофонда күмәнді дыбыс тіркелді.',                                         rule: '🔇 Ереже: Емтихан кезінде тыныш болу керек.' },
+  };
+
+  let warningCount    = 0;
+  let warningActive   = false;
+  let warnDismissTimer = null;
+  const violationHistory = [];
+
+  function triggerWarning(violationType) {
+    if (warningActive) return; // бір уақытта тек бір ескерту
+    warningCount++;
+    violationHistory.push(violationType);
+
+    const info = WARNING_RULES[violationType] || {
+      title:   'Ереже бұзылды!',
+      msg:     'Күмәнді әрекет анықталды.',
+      rule:    '⚠️ Ереже: Емтихан тәртібін сақтаңыз.'
+    };
+
+    // Нүктелерді жаңарту
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById('wDot' + i);
+      dot.classList.toggle('active', i <= warningCount);
+    }
+
+    document.getElementById('warnTitle').textContent   = `Ескерту ${warningCount}/3 — ${info.title}`;
+    document.getElementById('warnMessage').textContent = info.msg;
+    document.getElementById('warnRule').textContent    = info.rule;
+
+    const btn = document.getElementById('warnBtn');
+    if (warningCount >= 3) {
+      btn.style.display = 'none';
+      document.getElementById('warnCountdown').textContent = '';
+    } else {
+      btn.style.display = 'block';
+    }
+
+    warningActive = true;
+    document.getElementById('warningOverlay').classList.remove('hidden');
+
+    addLog(`🚨 ЕСКЕРТУ ${warningCount}/3: ${info.title}`, 'warn');
+
+    if (warningCount >= 3) {
+      // 3-ші ескерту → 2 секунд соң терминация
+      setTimeout(terminateExam, 2000);
+    } else {
+      // Авто-жабу таймері (15 секунд)
+      let remaining = 15;
+      document.getElementById('warnCountdown').textContent = `Немесе ${remaining} секундтан кейін автоматты жабылады`;
+      warnDismissTimer = setInterval(() => {
+        remaining--;
+        document.getElementById('warnCountdown').textContent = `Немесе ${remaining} секундтан кейін автоматты жабылады`;
+        if (remaining <= 0) dismissWarning();
+      }, 1000);
+    }
+  }
+
+  function dismissWarning() {
+    if (warnDismissTimer) { clearInterval(warnDismissTimer); warnDismissTimer = null; }
+    document.getElementById('warningOverlay').classList.add('hidden');
+    warningActive = false;
+  }
+
+  function terminateExam() {
+    // Ескерту оверлейін жабу
+    document.getElementById('warningOverlay').classList.add('hidden');
+
+    // Барлық ресурстарды тоқтату
+    if (cameraStream)        cameraStream.getTracks().forEach(t => t.stop());
+    if (faceDetectInterval)  clearInterval(faceDetectInterval);
+    if (aiFrameInterval)     clearInterval(aiFrameInterval);
+    if (micAnimFrame)        cancelAnimationFrame(micAnimFrame);
+
+    // Терминация экранын көрсету
+    const overlay = document.getElementById('terminateOverlay');
+    const list    = document.getElementById('terminateViolations');
+    list.innerHTML = '';
+    violationHistory.forEach((v, i) => {
+      const info = WARNING_RULES[v] || { title: v };
+      const li = document.createElement('li');
+      li.innerHTML = `<span>⚠</span> <strong>${i+1}-ескерту:</strong> ${info.title}`;
+      list.appendChild(li);
+    });
+    overlay.classList.remove('hidden');
+
+    // 5 секундтан кейін бетке қайтару
+    let sec = 5;
+    const redirectEl = document.getElementById('terminateRedirect');
+    const countdown = setInterval(() => {
+      sec--;
+      redirectEl.textContent = `${sec} секундтан кейін бетке қайтарыласыз...`;
+      if (sec <= 0) {
+        clearInterval(countdown);
+        if (currentSessionId) {
+          SessionAPI.finish(currentSessionId).catch(() => {});
+        }
+        window.location.href = 'student-dashboard.html';
+      }
+    }, 1000);
+  }
+
+  // ============================================================
   // НАҚТЫ УАҚЫТТАҒЫ КАМЕРА — WebRTC getUserMedia
   // ============================================================
   let cameraStream = null;
   let faceDetectInterval = null;
   let micAnalyser = null;
   let micAnimFrame = null;
+  let aiFrameInterval = null;
 
   async function requestCamera() {
     document.getElementById('permModal').classList.add('hidden');
@@ -529,6 +779,7 @@
         if (faceAwayCount > 3) {
           updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5 + faceAwayCount * 4);
           addLog('⚠ Бет экраннан аулақтап кетті!', 'warn');
+          triggerWarning('NO_FACE');
           faceAwayCount = 0;
         }
       } else {
@@ -605,23 +856,28 @@
       el.style.color = cheatTabCount > 2 ? '#ff5050' : 'var(--accent-yellow)';
       addLog('⚠ Қойынды ауыстыру анықталды!', 'warn');
       updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
+      triggerWarning('TAB_SWITCH');
     }
   });
 
-  document.addEventListener('copy', () => {
+  document.addEventListener('copy', (e) => {
+    e.preventDefault();
     cheatPasteCount++;
     document.getElementById('pasteCount').textContent = cheatPasteCount;
     document.getElementById('pasteCount').style.color = 'var(--accent-yellow)';
     addLog('⚠ Ctrl+C көшіру анықталды!', 'warn');
     updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
+    triggerWarning('COPY_PASTE');
   });
 
-  document.addEventListener('paste', () => {
+  document.addEventListener('paste', (e) => {
+    e.preventDefault();
     cheatPasteCount++;
     document.getElementById('pasteCount').textContent = cheatPasteCount;
     document.getElementById('pasteCount').style.color = '#ff5050';
     addLog('🚨 Ctrl+V қою анықталды!', 'warn');
     updateCheatScore(cheatTabCount * 8 + cheatPasteCount * 5);
+    triggerWarning('COPY_PASTE');
   });
 
   document.addEventListener('keydown', (e) => {
@@ -707,15 +963,6 @@
     document.getElementById('curQ').textContent = cur;
   }
 
-  function submitExam() {
-    if (confirm('Емтиханды тапсыруға сенімдісіз бе?')) {
-      if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-      if (faceDetectInterval) clearInterval(faceDetectInterval);
-      if (micAnimFrame) cancelAnimationFrame(micAnimFrame);
-      window.location.href = 'student-dashboard.html';
-    }
-  }
-
   // Бет тоқтатылса камераны өшіру
   window.addEventListener('beforeunload', () => {
     if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
@@ -725,7 +972,6 @@
   // BACKEND + AI SERVICE БАЙЛАНЫСЫ
   // ============================================================
   let currentSessionId = null;
-  let aiFrameInterval  = null;
   const canvas = document.createElement('canvas');
 
   // URL-ден examId алу
@@ -786,7 +1032,8 @@
           document.getElementById('faceStatus').className = 'cam-face-status good';
         }
 
-        // Violation-дарды backend-ке жіберу
+        // Violation-дарды backend-ке жіберу + ескерту шақыру
+        const HIGH_RISK = ['NO_FACE','MULTIPLE_FACES','MULTIPLE_PERSONS','PHONE_DETECTED','WINDOW_MINIMIZED','MULTIPLE_VOICES'];
         for (const v of (result.violations || [])) {
           const weights = {
             NO_FACE:40, MULTIPLE_FACES:60, MULTIPLE_PERSONS:50,
@@ -801,6 +1048,17 @@
           }).catch(() => {});
 
           addLog('🚨 ' + violationLabel(v), 'warn');
+
+          // Жоғары қауіп болса немесе final_decision warn/flag/terminate болса — ескерту
+          if (HIGH_RISK.includes(v) || result.final_decision === 'flag' || result.final_decision === 'terminate') {
+            triggerWarning(v);
+            break; // бір уақытта тек бір violation үшін ескерту
+          }
+        }
+
+        // AI terminate шешімі
+        if (result.final_decision === 'terminate' && warningCount < 3) {
+          warningCount = 2; // келесі triggerWarning шақыруы 3-ші болады
         }
       } catch (e) {
         console.warn('AI frame error:', e.message);
@@ -818,29 +1076,31 @@
     return map[v] || v;
   }
 
+  let aiFrameInterval = null;
+
   // AI анализді камера іске қосылғанда бастау
+  // sendFrameToAI өзі currentSessionId жоқ болса return жасайды — race condition жоқ
   const _origStartCamera = startCamera;
   startCamera = async function() {
     await _origStartCamera();
-    if (currentSessionId) {
-      aiFrameInterval = setInterval(sendFrameToAI, 3000); // әр 3 секунд сайын
+    if (!aiFrameInterval) {
+      aiFrameInterval = setInterval(sendFrameToAI, 3000);
     }
   };
 
   // Емтиханды аяқтау — session finish
-  const _origSubmit = submitExam;
-  submitExam = async function() {
+  async function submitExam() {
     if (!confirm('Емтиханды тапсыруға сенімдісіз бе?')) return;
-    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-    if (faceDetectInterval) clearInterval(faceDetectInterval);
-    if (aiFrameInterval)    clearInterval(aiFrameInterval);
-    if (micAnimFrame)       cancelAnimationFrame(micAnimFrame);
+    if (cameraStream)        cameraStream.getTracks().forEach(t => t.stop());
+    if (faceDetectInterval)  clearInterval(faceDetectInterval);
+    if (aiFrameInterval)     clearInterval(aiFrameInterval);
+    if (micAnimFrame)        cancelAnimationFrame(micAnimFrame);
 
     if (currentSessionId) {
       try { await SessionAPI.finish(currentSessionId); } catch (e) {}
     }
     window.location.href = 'student-dashboard.html';
-  };
+  }
 
   // ============================================================
   // ИНИЦИАЛИЗАЦИЯ

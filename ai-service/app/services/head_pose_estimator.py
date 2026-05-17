@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import mediapipe as mp
 from dataclasses import dataclass
 
 
@@ -13,67 +12,69 @@ class HeadPoseResult:
     violation: str | None
 
 
-# 3-D model points of canonical face (mm)
-_FACE_3D = np.array([
-    [0.0,    0.0,    0.0],       # nose tip      (1)
-    [0.0,  -330.0,  -65.0],      # chin          (152)
-    [-225.0, 170.0, -135.0],     # left  corner  (263)
-    [225.0,  170.0, -135.0],     # right corner  (33)
-    [-150.0,-150.0, -125.0],     # left  mouth   (287)
-    [150.0, -150.0, -125.0],     # right mouth   (57)
-], dtype=np.float64)
+_FACE_CASCADE = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+_EYE_CASCADE = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_eye.xml"
+)
+_PROFILE_CASCADE = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_profileface.xml"
+)
 
-_LM_INDICES = [1, 152, 263, 33, 287, 57]
-
-_YAW_LIMIT   = 30.0   # degrees
-_PITCH_LIMIT = 25.0   # degrees
+_YAW_LIMIT   = 30.0
+_PITCH_LIMIT = 25.0
 
 
 class HeadPoseEstimator:
-    def __init__(self):
-        self._face_mesh = mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=True,
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.5,
-        )
-
     def estimate(self, image: np.ndarray) -> HeadPoseResult:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         h, w = image.shape[:2]
-        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        mp_result = self._face_mesh.process(rgb)
 
-        if not mp_result.multi_face_landmarks:
-            return HeadPoseResult(
-                pitch=0.0, yaw=0.0, roll=0.0,
-                looking_away=True, violation="HEAD_NOT_DETECTED",
-            )
+        faces = _FACE_CASCADE.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
+        if len(faces) == 0:
+            # Check for profile face (head turned sideways)
+            profiles = _PROFILE_CASCADE.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
+            if len(profiles) > 0:
+                return HeadPoseResult(pitch=0.0, yaw=45.0, roll=0.0, looking_away=True, violation="HEAD_TURNED")
+            return HeadPoseResult(pitch=0.0, yaw=0.0, roll=0.0, looking_away=True, violation="HEAD_NOT_DETECTED")
 
-        lm = mp_result.multi_face_landmarks[0].landmark
-        face_2d = np.array(
-            [[lm[i].x * w, lm[i].y * h] for i in _LM_INDICES],
-            dtype=np.float64,
-        )
+        x, y, fw, fh = faces[0]
+        face_roi = gray[y:y + fh, x:x + fw]
 
-        focal = float(w)
-        cam = np.array([[focal, 0, w / 2],
-                        [0, focal, h / 2],
-                        [0, 0,     1    ]], dtype=np.float64)
-        dist = np.zeros((4, 1), dtype=np.float64)
+        eyes = _EYE_CASCADE.detectMultiScale(face_roi, scaleFactor=1.1, minNeighbors=5)
 
-        _, rot_vec, _ = cv2.solvePnP(_FACE_3D, face_2d, cam, dist,
-                                     flags=cv2.SOLVEPNP_ITERATIVE)
-        rmat, _ = cv2.Rodrigues(rot_vec)
-        angles, *_ = cv2.RQDecomp3x3(rmat)
+        yaw = 0.0
+        pitch = 0.0
+        roll = 0.0
 
-        pitch = round(angles[0] * 360, 1)
-        yaw   = round(angles[1] * 360, 1)
-        roll  = round(angles[2] * 360, 1)
+        if len(eyes) >= 2:
+            # Estimate yaw from eye symmetry relative to face center
+            eye_centers = [(ex + ew // 2, ey + eh // 2) for ex, ey, ew, eh in eyes[:2]]
+            avg_x = sum(c[0] for c in eye_centers) / 2
+            face_cx = fw / 2
+            offset_ratio = (avg_x - face_cx) / (face_cx + 1e-6)
+            yaw = round(offset_ratio * _YAW_LIMIT * 2, 1)
+
+            # Estimate roll from eye height difference
+            dy = eye_centers[0][1] - eye_centers[1][1]
+            dx = eye_centers[0][0] - eye_centers[1][0] + 1e-6
+            roll = round(float(np.degrees(np.arctan2(dy, dx))), 1)
+
+            # Estimate pitch from face vertical position in frame
+            face_cy_ratio = (y + fh / 2) / (h + 1e-6)
+            pitch = round((face_cy_ratio - 0.5) * _PITCH_LIMIT * 2, 1)
+        elif len(eyes) == 1:
+            # Only one eye visible — head likely turned
+            ex, ey, ew, eh = eyes[0]
+            eye_cx = ex + ew // 2
+            face_cx = fw / 2
+            yaw = 35.0 if eye_cx < face_cx else -35.0
+        else:
+            # No eyes detected
+            yaw = 0.0
 
         looking_away = abs(yaw) > _YAW_LIMIT or abs(pitch) > _PITCH_LIMIT
         violation = "HEAD_TURNED" if looking_away else None
 
-        return HeadPoseResult(
-            pitch=pitch, yaw=yaw, roll=roll,
-            looking_away=looking_away, violation=violation,
-        )
+        return HeadPoseResult(pitch=pitch, yaw=yaw, roll=roll, looking_away=looking_away, violation=violation)

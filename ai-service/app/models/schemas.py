@@ -24,7 +24,11 @@ class AnalyzeResponse(BaseModel):
 
     # Aggregated
     violations: list[str]
-    cheat_score: int   # 0 – 100
+    cheat_score: int        # 0 – 100
+    risk_level: str         # low | medium | high | critical
+    detected_events: list[str]
+    final_decision: str     # allow | warn | flag | terminate
+    explanation: str
     message: str
 
 

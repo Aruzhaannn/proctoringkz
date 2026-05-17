@@ -5,4 +5,5 @@ venv*/
 .venv/
 *.log
 .git/
-yolov8n.pt
+tests/
+face_detection_test.py
