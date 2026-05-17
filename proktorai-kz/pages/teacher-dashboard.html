@@ -374,15 +374,12 @@
 
       <!-- ===== СТУДЕНТТЕР ===== -->
       <div id="section-students" style="display:none;">
-        <div class="page-header fade-in"><h1>👥 Студенттер</h1><p>Тіркелген студенттер тізімі</p></div>
+        <div class="page-header fade-in"><h1>👥 Студенттер</h1><p>Белсенді сессиядағы студенттер</p></div>
         <div class="card fade-in">
           <table class="data-table">
-            <thead><tr><th>Аты</th><th>Топ</th><th>Емтихандар</th><th>Орт. балл</th><th>Соңғы белсенділік</th></tr></thead>
-            <tbody>
-              <tr><td><strong>Айгерім Студент</strong></td><td>АТ-401</td><td>5</td><td style="color:var(--accent-green);">87%</td><td>Бүгін</td></tr>
-              <tr><td><strong>Берік Қалиев</strong></td><td>АТ-401</td><td>5</td><td style="color:var(--accent-yellow);">73%</td><td>Кеше</td></tr>
-              <tr><td><strong>Дана Сейітова</strong></td><td>АТ-312</td><td>4</td><td style="color:var(--accent);">81%</td><td>2 күн бұрын</td></tr>
-              <tr><td><strong>Ерлан Жаков</strong></td><td>АТ-312</td><td>4</td><td style="color:#ff7070;">58%</td><td>3 күн бұрын</td></tr>
+            <thead><tr><th>Аты</th><th>Емтихан</th><th>Бұзушылықтар</th><th>Қауіп баллы</th><th>Мәртебе</th></tr></thead>
+            <tbody id="studentListBody">
+              <tr><td colspan="5" style="color:var(--text-muted);padding:16px;text-align:center;">Деректер жүктелуде...</td></tr>
             </tbody>
           </table>
         </div>
@@ -581,7 +578,24 @@
           <td style="color:var(--text-muted)">${s.violations?.length || 0}</td>
           <td><button class="btn btn-ghost" style="font-size:0.72rem;padding:5px 10px;" onclick="terminateSession(${s.id})">⛔ Тоқтату</button></td>
         </tr>`;
-      }).join('');
+      }).join('');\r
+\r
+      // Populate students tab with real session data\r
+      const studentBody = document.getElementById('studentListBody');\r
+      if (studentBody) {\r
+        studentBody.innerHTML = list.length ? list.map(s => {\r
+          const risk = riskLevel(s.cheatScore);\r
+          const color = risk==='high'?'#ff5050':risk==='mid'?'var(--accent-yellow)':'var(--accent-green)';\r
+          const statusLabel = s.status === 'IN_PROGRESS' ? '<span class="badge badge-green">Белсенді</span>' : s.status === 'COMPLETED' ? '<span class="badge badge-blue">Аяқталды</span>' : '<span class="badge badge-red">Тоқтатылды</span>';\r
+          return `<tr>\r
+            <td><strong>${s.studentName}</strong></td>\r
+            <td style="font-size:0.82rem;color:var(--text-muted);">${s.examTitle || '-'}</td>\r
+            <td>${s.violations?.length || 0}</td>\r
+            <td style="color:${color};font-weight:700;">${s.cheatScore}%</td>\r
+            <td>${statusLabel}</td>\r
+          </tr>`;\r
+        }).join('') : '<tr><td colspan="5" style="color:var(--text-muted);padding:16px;text-align:center;">Белсенді сессия жоқ</td></tr>';\r
+      }\r
     }
 
     async function terminateSession(id) {
@@ -609,21 +623,24 @@
     async function loadSessions() {
       try {
         const examId = examSelect?.value;
-        allSessions = examId
-          ? await SessionAPI.getByExam(examId)
-          : (await ExamAPI.getMine()).flatMap ? [] : [];
-
-        if (!examId) {
-          // Load sessions for all my exams
+        if (examId) {
+          allSessions = await SessionAPI.getByExam(examId);
+        } else {
+          // Load sessions for ALL my exams (active and others)
           const exams = await ExamAPI.getMine();
-          const active = exams.filter(e => e.status === 'ACTIVE');
-          const results = await Promise.all(active.map(e => SessionAPI.getByExam(e.id).catch(() => [])));
-          allSessions = results.flat();
+          const results = await Promise.all(
+            exams.map(e => SessionAPI.getByExam(e.id).catch(() => []))
+          );
+          allSessions = results.flat()
+            .filter(s => s.status === 'IN_PROGRESS');  // Only show active sessions
         }
 
         renderGrid(allSessions, 'all');
       } catch (e) {
-        console.error(e);
+        console.error('loadSessions error:', e);
+        // Don't inject demo data — show empty state
+        allSessions = [];
+        renderGrid(allSessions, 'all');
       }
     }
 
@@ -1023,20 +1040,9 @@
     // Audit log section init
     writeAuditLog('SESSION_START', 0, 'Мұғалім панелі ашылды · ' + new Date().toLocaleDateString('ru-RU'));
 
-    // Simulate demo alert (useful for testing without backend)
+    // Refresh sessions when switching to live monitoring tab
     document.querySelector('[data-section="live"]')?.addEventListener('click', () => {
-      if (allSessions.length === 0) {
-        const demo = [
-          { id:1, studentName:'Берік Қалиев',   cheatScore:78, violations:[{type:'TAB_SWITCH',score:8,detectedAt:new Date()},{type:'COPY_PASTE',score:5,detectedAt:new Date()},{type:'NO_FACE',score:40,detectedAt:new Date()}], examId:1 },
-          { id:2, studentName:'Ерлан Жаков',     cheatScore:92, violations:[{type:'PHONE_DETECTED',score:70,detectedAt:new Date()},{type:'GAZE_AWAY',score:20,detectedAt:new Date()}], examId:1 },
-          { id:3, studentName:'Дана Сейітова',   cheatScore:45, violations:[{type:'TAB_SWITCH',score:8,detectedAt:new Date()}], examId:1 },
-          { id:4, studentName:'Айгерім Студент', cheatScore:12, violations:[], examId:1 },
-          { id:5, studentName:'Зарина Мұқанова', cheatScore:63, violations:[{type:'VOICE_DETECTED',score:30,detectedAt:new Date()},{type:'GAZE_AWAY',score:20,detectedAt:new Date()}], examId:1 },
-        ];
-        allSessions = demo;
-        renderGrid(demo);
-        checkAndTriggerAlerts(demo);
-      }
+      loadSessions();
     });
   </script>
 </body>

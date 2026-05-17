@@ -9,6 +9,9 @@ opencv-python-headless>=4.10.0
 numpy>=2.0.0
 Pillow>=10.4.0
 
+# Face detection & landmark estimation
+mediapipe>=0.10.14
+
 # Object detection — YOLOv8 (installs torch automatically)
 ultralytics>=8.3.0
 

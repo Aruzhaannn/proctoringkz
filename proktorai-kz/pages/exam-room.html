@@ -2172,18 +2172,19 @@
 
   // Видеодан frame → AI Service жіберу
   async function sendFrameToAI() {
-    if (!currentSessionId) return;
+    // Allow AI analysis even in demo mode (no backend session)
+    const sessionId = currentSessionId || 'demo';
     const video = document.getElementById('realCamera');
     if (!video || video.readyState < 2) return;
 
-    canvas.width  = 320;
-    canvas.height = 240;
-    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+    canvas.width  = 640;
+    canvas.height = 480;
+    canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       try {
-        const result = await AiAPI.analyzeFrame(currentSessionId, blob);
+        const result = await AiAPI.analyzeFrame(sessionId, blob);
         if (!result) return;
 
         // ── Бет статусы + persistent no-face lock ────────────
@@ -2191,6 +2192,7 @@
         if (result.face_count === 0) {
           document.getElementById('faceStatus').textContent = 'Бет табылмады ❌';
           document.getElementById('faceStatus').className = 'cam-face-status bad';
+          document.getElementById('faceBox').classList.remove('visible');
           if (!cheatEngine.hardLocked && !_phoneLocked) {
             nofaceOverlay.classList.remove('hidden');
             speakFaceAlert();
@@ -2200,11 +2202,15 @@
         } else if (result.face_count > 1) {
           document.getElementById('faceStatus').textContent = 'Бірнеше адам! ⚠';
           document.getElementById('faceStatus').className = 'cam-face-status bad';
+          document.getElementById('faceBox').classList.add('visible');
+          document.getElementById('faceBox').style.borderColor = '#ff5050';
           nofaceOverlay.classList.add('hidden');
           stopNofaceCountdown();
         } else {
           document.getElementById('faceStatus').textContent = 'Бет анықталды ✓';
           document.getElementById('faceStatus').className = 'cam-face-status ok';
+          document.getElementById('faceBox').classList.add('visible');
+          document.getElementById('faceBox').style.borderColor = 'var(--accent-green)';
           nofaceOverlay.classList.add('hidden');
           stopNofaceCountdown();
         }
@@ -2222,12 +2228,15 @@
 
         const weights = { NO_FACE:40, MULTIPLE_FACES:60, MULTIPLE_PERSONS:50, PERSON_ABSENT:40, GAZE_AWAY:20, HEAD_TURNED:25, PHONE_DETECTED:70, BOOK_DETECTED:40 };
         for (const v of (result.violations || [])) {
-          await SessionAPI.addViolation({
-            sessionId: currentSessionId,
-            type:      v,
-            score:     weights[v] || 10,
-            details:   JSON.stringify({ gaze: result.gaze_direction, yaw: result.head_yaw })
-          }).catch(() => {});
+          // Only send violations to backend if we have a real session
+          if (currentSessionId) {
+            await SessionAPI.addViolation({
+              sessionId: currentSessionId,
+              type:      v,
+              score:     weights[v] || 10,
+              details:   JSON.stringify({ gaze: result.gaze_direction, yaw: result.head_yaw })
+            }).catch(() => {});
+          }
           addLog('🤖 AI: ' + violationLabel(v), 'warn');
           cheatEngine.addEvent(v, { source: 'ai', gaze: result.gaze_direction });
 
