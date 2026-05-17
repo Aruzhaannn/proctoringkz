@@ -1630,6 +1630,7 @@
       return;
     }
     
+    const canvas = document.createElement('canvas');
     canvas.width = 640; canvas.height = 480;
     canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
     
@@ -1673,13 +1674,36 @@
     const ctx = canvas.getContext('2d');
     
     const screenV = document.createElement('video');
-    screenV.srcObject = screenS; screenV.autoplay = true; screenV.muted = true;
+    screenV.srcObject = screenS;
+    screenV.autoplay = true;
+    screenV.muted = true;
+    screenV.playsInline = true;
+    screenV.setAttribute('playsinline', '');
     
     const camV = document.createElement('video');
-    camV.srcObject = camS; camV.autoplay = true; camV.muted = true;
+    camV.srcObject = camS;
+    camV.autoplay = true;
+    camV.muted = true;
+    camV.playsInline = true;
+    camV.setAttribute('playsinline', '');
     
-    setInterval(() => {
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1280, 720);
+    // Force play (browsers may block autoplay on hidden elements)
+    const forcePlay = (v) => {
+      v.play().catch(() => {
+        setTimeout(() => v.play().catch(() => {}), 500);
+      });
+    };
+    
+    screenV.addEventListener('loadedmetadata', () => forcePlay(screenV));
+    camV.addEventListener('loadedmetadata', () => forcePlay(camV));
+    forcePlay(screenV);
+    forcePlay(camV);
+    
+    let _compositeRunning = true;
+    function drawFrame() {
+      if (!_compositeRunning) return;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 1280, 720);
       if (screenV.readyState >= 2) {
         ctx.drawImage(screenV, 0, 0, 1280, 720);
       }
@@ -1690,7 +1714,12 @@
         ctx.strokeStyle = '#ff4040'; ctx.lineWidth = 3;
         ctx.strokeRect(x, y, w, h);
       }
-    }, 1000 / 20); // 20 fps to save CPU
+      requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+    
+    // Store cleanup reference
+    window._compositeCleanup = () => { _compositeRunning = false; };
     
     return canvas.captureStream(20);
   }
@@ -1711,13 +1740,17 @@
       compositeStream = initCompositeStream(screenStream, cameraStream);
       
       evidenceCollector = new EvidenceCollector(video);
-      // Буферге камера + экран бірге жазылады
-      evidenceCollector.startBuffer(compositeStream);
       startFaceSimulation();
       startMicMonitor();
       
-      // Записываем композитный поток
-      startScreenRecording(compositeStream);
+      // Даём 1 секунду на стабилизацию composite stream (чтобы canvas получил кадры)
+      setTimeout(() => {
+        // Буферге камера + экран бірге жазылады
+        evidenceCollector.startBuffer(compositeStream);
+        // Записываем композитный поток
+        startScreenRecording(compositeStream);
+        addLog('🎥 Композитная запись (экран+камера) запущена', 'ok');
+      }, 1000);
       
       initExamSession(); // Бэкэндте сессияны енді бастаймыз
       if (!aiFrameInterval) aiFrameInterval = setInterval(sendFrameToAI, 3000);
@@ -1970,52 +2003,9 @@
     }
   });
 
-  // ============================================================
-  // КӨЗ БАҒЫТЫ ТАЙМЕРІ (5–10 секунд ескерту)
-  // ============================================================
-  let _gazeAwayStart   = 0;
-  let _gazeAwayTimer   = null;
-  let _gazeAlertCount  = 0;
-  let _gazeTimerTick   = null;
-  let _lastGazeAlertTime = 0;
-
-  function startGazeTimer() {
-    if (_gazeAwayStart > 0) return; // Already counting
-    _gazeAwayStart = Date.now();
-    const banner   = document.getElementById('gazeTimerBanner');
-    banner.classList.remove('hidden');
-    let secs = 0;
-    if (_gazeTimerTick) clearInterval(_gazeTimerTick);
-    _gazeTimerTick = setInterval(() => {
-      secs = Math.round((Date.now() - _gazeAwayStart) / 1000);
-      const cEl = document.getElementById('gazeTimerCount');
-      const sEl = document.getElementById('gazeTimerSub');
-      if (cEl) cEl.textContent = secs;
-      if (sEl) {
-        if (secs < 5)       sEl.textContent = 'Экранға қараңыз!';
-        else if (secs < 10) sEl.textContent = '⚠ Ескерту жіберіледі!';
-        else                sEl.textContent = '🚨 Мұғалімге хабарланды!';
-      }
-      if (secs >= 5 && Date.now() - _lastGazeAlertTime > 15000) {
-        _lastGazeAlertTime = Date.now();
-        _gazeAlertCount++;
-        addLog('👁️ Көз ' + secs + 'с экраннан алыс (#' + _gazeAlertCount + ')', 'warn');
-        cheatEngine.addEvent('GAZE_AWAY', { durationSec: secs });
-        if (_gazeAlertCount >= 3) showTeacherToast(cheatEngine.riskScore, 'Студент ' + _gazeAlertCount + ' рет ' + secs + 'с экраннан тыс қарады');
-        if (secs >= 10) {
-          speakWarning('Экранға қараңыз');
-        }
-      }
-    }, 1000);
-  }
-
-  function stopGazeTimer() {
-    if (_gazeAwayStart === 0) return;
-    _gazeAwayStart = 0;
-    if (_gazeTimerTick) { clearInterval(_gazeTimerTick); _gazeTimerTick = null; }
-    document.getElementById('gazeTimerBanner').classList.add('hidden');
-    document.getElementById('gazeTimerCount').textContent = '0';
-  }
+  // Көз бағыты таймері жойылды (троттлинг қолданылады)
+  function startGazeTimer() {}
+  function stopGazeTimer() {}
 
   // ============================================================
   // БЕТ АНЫҚТАЛМАДЫ — 5 СЕКУНД ТАЙМЕРІ
@@ -2361,8 +2351,38 @@
 
   // Емтиханды бастау — backend session жасау
   async function initExamSession() {
-    const examId = getExamId();
-    if (!examId) return;   // demo режімі — examId жоқ
+    let examId = getExamId();
+    
+    // Егер examId жоқ болса — белсенді емтиханды автоматты түрде іздеу
+    if (!examId) {
+      try {
+        const activeExams = await ExamAPI.getActive();
+        if (activeExams && activeExams.length > 0) {
+          examId = activeExams[0].id;
+          console.log('[ProctorAI] Auto-selected active exam:', examId, activeExams[0].title);
+        }
+      } catch (e) {
+        console.warn('[ProctorAI] No active exams found:', e.message);
+      }
+    }
+    
+    // Егер examId жоқ — teacher-ге де бот шарайымен көрсетеміз
+    if (!examId) {
+      try {
+        const allExams = await ExamAPI.getMine();
+        if (allExams && allExams.length > 0) {
+          examId = allExams[0].id;
+          console.log('[ProctorAI] Fallback to first exam:', examId);
+        }
+      } catch (e) {
+        console.warn('[ProctorAI] No exams at all:', e.message);
+      }
+    }
+    
+    if (!examId) {
+      console.warn('[ProctorAI] Demo mode — no examId available');
+      return;
+    }
 
     try {
       const session = await SessionAPI.start(examId);
@@ -2386,6 +2406,7 @@
     const video = document.getElementById('realCamera');
     if (!video || video.readyState < 2) return;
 
+    const canvas = document.createElement('canvas');
     canvas.width  = 640;
     canvas.height = 480;
     canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
@@ -2442,23 +2463,22 @@
         const isGazeAway = (result.violations || []).includes('GAZE_AWAY') ||
                            (result.looking_away === true) ||
                            (gazeDir !== 'center' && gazeDir !== 'forward' && gazeDir !== 'unknown');
-        if (isGazeAway) {
-          console.log('[ProctorAI] GAZE AWAY detected:', gazeDir);
-          startGazeTimer();
-          cheatEngine.updateGazeStability(false);
-        } else {
-          stopGazeTimer();
-          cheatEngine.updateGazeStability(true);
-        }
-
-        // ── Head pose tracking ────────────────────────────────
-        if (result.head_turned) {
-          console.log('[ProctorAI] HEAD TURNED: yaw=' + result.head_yaw + ', pitch=' + result.head_pitch);
+        
+        if (isGazeAway && !(result.violations || []).includes('GAZE_AWAY')) {
+          result.violations.push('GAZE_AWAY');
         }
 
         // ── Process violations ────────────────────────────────
         const weights = { NO_FACE:40, MULTIPLE_FACES:60, MULTIPLE_PERSONS:50, PERSON_ABSENT:40, GAZE_AWAY:20, HEAD_TURNED:25, PHONE_DETECTED:70, BOOK_DETECTED:40 };
         for (const v of (result.violations || [])) {
+          // Троттлинг: не выводим одно и то же нарушение чаще чем раз в 3 секунд
+          const now = Date.now();
+          if (window._violationThrottle && window._violationThrottle[v] && (now - window._violationThrottle[v]) < 1500) {
+            continue;
+          }
+          if (!window._violationThrottle) window._violationThrottle = {};
+          window._violationThrottle[v] = now;
+
           // Only send violations to backend if we have a real session
           if (currentSessionId) {
             await SessionAPI.addViolation({

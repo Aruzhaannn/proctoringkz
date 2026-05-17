@@ -96,6 +96,24 @@ class EvidenceCollector {
     };
   }
 
+  // ─── TRANSLITERATION (Cyrillic → Latin for PDF) ─────────────
+  _translit(text) {
+    if (!text) return '';
+    const map = {
+      'А':'A','Ә':'A','Б':'B','В':'V','Г':'G','Ғ':'G','Д':'D','Е':'E','Ё':'Yo',
+      'Ж':'Zh','З':'Z','И':'I','Й':'Y','К':'K','Қ':'Q','Л':'L','М':'M','Н':'N',
+      'Ң':'N','О':'O','Ө':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ұ':'U',
+      'Ү':'U','Ф':'F','Х':'Kh','Һ':'H','Ц':'Ts','Ч':'Ch','Ш':'Sh','Щ':'Shch',
+      'Ъ':'','Ы':'Y','І':'I','Ь':'','Э':'E','Ю':'Yu','Я':'Ya',
+      'а':'a','ә':'a','б':'b','в':'v','г':'g','ғ':'g','д':'d','е':'e','ё':'yo',
+      'ж':'zh','з':'z','и':'i','й':'y','к':'k','қ':'q','л':'l','м':'m','н':'n',
+      'ң':'n','о':'o','ө':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ұ':'u',
+      'ү':'u','ф':'f','х':'kh','һ':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch',
+      'ъ':'','ы':'y','і':'i','ь':'','э':'e','ю':'yu','я':'ya',
+    };
+    return String(text).split('').map(c => map[c] || c).join('');
+  }
+
   // ─── PDF REPORT ─────────────────────────────────────────────
   async makePDF(student, exam) {
     const lib = (typeof window.jspdf !== 'undefined') ? window.jspdf :
@@ -104,6 +122,7 @@ class EvidenceCollector {
 
     const { jsPDF } = lib;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const T = (s) => this._translit(s); // shorthand
 
     const R = [220, 50, 50], O = [255, 140, 0], G = [45, 190, 140],
           GR = [100, 100, 100], DK = [25, 28, 42], LB = [248, 249, 255];
@@ -140,7 +159,7 @@ class EvidenceCollector {
     doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DK);
     doc.text('STUDENT', 15, y + 8);
     doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR); doc.setFontSize(8);
-    [['Aty-joni:', student.name || 'Belgisiz'],
+    [['Aty-joni:', T(student.name) || 'Belgisiz'],
      ['Email:',   student.email || '-'],
      ['ID:',      String(student.id || '-')]].forEach(([k, v], i) => {
       doc.setFont('helvetica', 'bold'); doc.setTextColor(...DK);
@@ -152,9 +171,9 @@ class EvidenceCollector {
     doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DK);
     doc.text('EMTIXAN', 113, y + 8);
     doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR); doc.setFontSize(8);
-    [['Atauhy:', exam.title || 'Belgisiz'],
+    [['Atauhy:', T(exam.title) || 'Belgisiz'],
      ['Kuni:',   exam.date  || new Date().toLocaleDateString('ru-RU')],
-     ['Уaqyt:',  exam.startTime || '-']].forEach(([k, v], i) => {
+     ['Uaqyt:',  exam.startTime || '-']].forEach(([k, v], i) => {
       doc.setFont('helvetica', 'bold'); doc.setTextColor(...DK);
       doc.text(k, 113, y + 16 + i * 10);
       doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR);
@@ -167,9 +186,9 @@ class EvidenceCollector {
     const critCount = this.timeline.filter(e => e.riskLevel === 'critical').length;
     const highCount = this.timeline.filter(e => e.riskLevel === 'high').length;
     const stats = [
-      ['Jalpý buzushylyk:', String(this.timeline.length), DK],
-      ['Kritikahlyk:',      String(critCount),             R],
-      ['Zhogary qauip:',    String(highCount),             O],
+      ['Jalpy buzushylyk:', String(this.timeline.length), DK],
+      ['Kritikalyk:',       String(critCount),             R],
+      ['Zhogary qauip:',   String(highCount),             O],
       ['Max score:',        `${maxScore}%`,                vc],
     ];
 
@@ -201,7 +220,7 @@ class EvidenceCollector {
       doc.rect(10, y, 3, 20, 'F');
 
       doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...lc);
-      doc.text(`${i+1}. ${ev.violationType}`, 17, y + 8);
+      doc.text(`${i+1}. ${T(ev.violationType)}`, 17, y + 8);
       doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR);
       doc.text(ev.timeStr, 160, y + 8);
       doc.text(`Score: ${ev.riskScore}%  |  ${ev.riskLevel.toUpperCase()}`, 17, y + 16);

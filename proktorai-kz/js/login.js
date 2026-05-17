@@ -49,7 +49,17 @@ document.getElementById('loginForm').addEventListener('submit', async function (
   btn.innerHTML  = '<span class="btn-text">Кірілуде...</span>';
   btn.disabled   = true;
 
-  // Demo mode bypass
+  // Always try real backend first
+  try {
+    const data = await AuthAPI.login(emailVal, passVal);
+    Auth.save(data);
+    redirectByRole(data.role);
+    return;
+  } catch (backendErr) {
+    console.log('Backend login failed, trying demo fallback:', backendErr.message);
+  }
+
+  // Demo mode fallback (when backend is offline)
   const demo = DEMO_USERS[emailVal.toLowerCase()];
   if (demo && demo.password === passVal) {
     Auth.save({ accessToken: 'demo-token', refreshToken: 'demo-refresh', userId: demo.userId, email: emailVal, fullName: demo.fullName, role: demo.role });
@@ -57,13 +67,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
     return;
   }
 
-  try {
-    const data = await AuthAPI.login(emailVal, passVal);
-    Auth.save(data);
-    redirectByRole(data.role);
-  } catch (err) {
-    showError('Email немесе пароль қате');
-    btn.innerHTML = '<span class="btn-text">Жүйеге кіру</span><div class="btn-arrow">→</div>';
-    btn.disabled  = false;
-  }
+  showError('Email немесе пароль қате');
+  btn.innerHTML = '<span class="btn-text">Жүйеге кіру</span><div class="btn-arrow">→</div>';
+  btn.disabled  = false;
 });

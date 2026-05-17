@@ -150,19 +150,19 @@
       <div class="grid-4 fade-in-1" style="margin-bottom:28px;">
         <div class="stat-card blue">
           <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-          <div class="stat-card-value">342</div><div class="stat-card-label">Барлық пайдаланушылар</div><div class="stat-card-change up">↑ 18 осы апта</div>
+          <div class="stat-card-value" id="overviewUsers">—</div><div class="stat-card-label">Барлық пайдаланушылар</div>
         </div>
         <div class="stat-card green">
           <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg></div>
-          <div class="stat-card-value">28</div><div class="stat-card-label">Айлық емтихандар</div><div class="stat-card-change up">↑ 5</div>
+          <div class="stat-card-value" id="overviewExams">—</div><div class="stat-card-label">Айлық емтихандар</div>
         </div>
         <div class="stat-card purple">
           <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-          <div class="stat-card-value">1847</div><div class="stat-card-label">ИИ анықтаулары</div><div class="stat-card-change up">↑ 12%</div>
+          <div class="stat-card-value" id="overviewDetections">—</div><div class="stat-card-label">ИИ анықтаулары</div>
         </div>
         <div class="stat-card green">
           <div class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-          <div class="stat-card-value">99%</div><div class="stat-card-label">Жүйе қолжетімділігі</div><div class="stat-card-change up">SLA орындалды</div>
+          <div class="stat-card-value" id="overviewUptime">100%</div><div class="stat-card-label">Жүйе қолжетімділігі</div>
         </div>
       </div>
 
@@ -254,28 +254,8 @@
         <div id="tab-exams" class="tab-pane">
           <table class="data-table">
             <thead><tr><th>Емтихан атауы</th><th>Курс</th><th>Оқытушы</th><th>Студенттер</th><th>Режим</th><th>Мәртебе</th><th>Әрекет</th></tr></thead>
-            <tbody>
-              <tr>
-                <td><div style="font-weight:500;color:var(--text-primary)">Дер. Құрылымдары — Аралық</div></td>
-                <td>АТ401</td><td>Проф. Айбек Н.</td><td>28</td>
-                <td><span class="badge badge-red">Толық бақылау</span></td>
-                <td><span class="badge badge-green"><span class="status-dot online"></span> Тікелей</span></td>
-                <td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Қарау</button></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight:500;color:var(--text-primary)">ДҚБЖ — Қорытынды</div></td>
-                <td>АТ312</td><td>Проф. Гүлмира С.</td><td>35</td>
-                <td><span class="badge badge-blue">Прокторинг</span></td>
-                <td><span class="badge badge-yellow">Жоспарланған</span></td>
-                <td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Өңдеу</button></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight:500;color:var(--text-primary)">ОЖ — Бақылау жұмысы</div></td>
-                <td>АТ380</td><td>Проф. Бекбол М.</td><td>42</td>
-                <td><span class="badge badge-green">Қарапайым тест</span></td>
-                <td><span class="badge badge-green">Аяқталды</span></td>
-                <td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Есеп</button></td>
-              </tr>
+            <tbody id="tabExamsBody">
+              <tr><td colspan="7" style="color:var(--text-muted);text-align:center;">Деректер жүктелуде...</td></tr>
             </tbody>
           </table>
         </div>
@@ -300,10 +280,8 @@
         <div class="card fade-in">
           <table class="data-table">
             <thead><tr><th>Емтихан атауы</th><th>Курс</th><th>Оқытушы</th><th>Студенттер</th><th>Режим</th><th>Мәртебе</th><th>Әрекет</th></tr></thead>
-            <tbody>
-              <tr><td><div style="font-weight:500;color:var(--text-primary)">Дер. Құрылымдары — Аралық</div></td><td>АТ401</td><td>Проф. Айбек Н.</td><td>28</td><td><span class="badge badge-red">Толық бақылау</span></td><td><span class="badge badge-green"><span class="status-dot online"></span> Тікелей</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Қарау</button></td></tr>
-              <tr><td><div style="font-weight:500;color:var(--text-primary)">ДҚБЖ — Қорытынды</div></td><td>АТ312</td><td>Проф. Гүлмира С.</td><td>35</td><td><span class="badge badge-blue">Прокторинг</span></td><td><span class="badge badge-yellow">Жоспарланған</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Өңдеу</button></td></tr>
-              <tr><td><div style="font-weight:500;color:var(--text-primary)">ОЖ — Бақылау жұмысы</div></td><td>АТ380</td><td>Проф. Бекбол М.</td><td>42</td><td><span class="badge badge-green">Қарапайым тест</span></td><td><span class="badge badge-green">Аяқталды</span></td><td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Есеп</button></td></tr>
+            <tbody id="sectionExamsBody">
+              <tr><td colspan="7" style="color:var(--text-muted);text-align:center;">Деректер жүктелуде...</td></tr>
             </tbody>
           </table>
         </div>
@@ -444,20 +422,30 @@
     }
 
     // ── Load exams for admin ──────────────────────────────────────
+    // ── Load exams for admin ──────────────────────────────────────
     async function loadExams() {
       try {
         const exams = await ExamAPI.getAll();
-        const tbody = document.querySelector('#tab-exams table tbody');
-        if (!tbody) return;
-        tbody.innerHTML = exams && exams.length
+        const tbodies = [document.getElementById('tabExamsBody'), document.getElementById('sectionExamsBody')];
+        const html = exams && exams.length
           ? exams.map(e => `<tr>
               <td><div style="font-weight:500;color:var(--text-primary)">${e.title}</div></td>
+              <td>—</td>
               <td>${e.createdByName || '—'}</td>
-              <td>${e.durationMinutes} мин</td>
+              <td>—</td>
+              <td><span class="badge badge-blue">Прокторинг</span></td>
               <td><span class="badge badge-${e.status==='ACTIVE'?'green':e.status==='FINISHED'?'gray':'blue'}">${e.status}</span></td>
-              <td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Есеп</button></td>
+              <td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;">Қарау</button></td>
             </tr>`).join('')
-          : '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;">Емтихандар жоқ</td></tr>';
+          : '<tr><td colspan="7" style="color:var(--text-muted);text-align:center;">Емтихандар жоқ</td></tr>';
+        
+        tbodies.forEach(tb => {
+          if (tb) tb.innerHTML = html;
+        });
+
+        // Update overview stats
+        const overviewExams = document.getElementById('overviewExams');
+        if (overviewExams && exams) overviewExams.textContent = exams.length;
       } catch (e) { console.error('loadExams:', e); }
     }
 
@@ -471,6 +459,8 @@
         set('analytics-total-sessions',   dash.totalSessions);
         set('analytics-total-violations', dash.totalViolations);
         set('analytics-high-risk',        dash.highRiskStudents);
+
+        set('overviewDetections', dash.totalViolations);
 
         const violEl = document.getElementById('analytics-violations-list');
         if (violEl && dash.topViolations && dash.topViolations.length) {
@@ -501,19 +491,24 @@
     }
 
     // ── Render static audit log ───────────────────────────────────
-    const audits = [
-      { t:'2026-05-09', who:'Жүйе',    what:'Жоба іске қосылды — ProktorAI v1.0', c:'var(--accent-green)' },
-      { t:'2026-05-09', who:'Әкімші',  what:'Жүйе конфигурациясы жасалды',        c:'var(--accent)' },
-    ];
-    const auditEl = document.getElementById('auditLog');
-    if (auditEl) {
-      auditEl.innerHTML = audits.map(a => `
-        <div class="audit-item">
-          <div class="audit-time">${a.t}</div>
-          <div class="audit-dot" style="background:${a.c}"></div>
-          <div class="audit-what"><span class="audit-who">${a.who}</span> — ${a.what}</div>
-        </div>`).join('');
+    // ── Render dynamic audit log ───────────────────────────────────
+    async function loadAuditLogs() {
+      try {
+        const audits = await AuditAPI.getAll().catch(() => []);
+        const html = audits && audits.length > 0 ? audits.map(a => `
+          <div class="audit-item">
+            <div class="audit-time">${new Date(a.timestamp).toLocaleString('kk-KZ')}</div>
+            <div class="audit-dot" style="background:var(--accent)"></div>
+            <div class="audit-what"><span class="audit-who">${a.who}</span> — ${a.action}: ${a.details}</div>
+          </div>`).join('') : '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:20px;">Журнал бос</div>';
+        
+        const auditEl = document.getElementById('auditLog');
+        if (auditEl) auditEl.innerHTML = html;
+        const auditFullEl = document.getElementById('auditLogFull');
+        if (auditFullEl) auditFullEl.innerHTML = html;
+      } catch(e) { console.warn('loadAuditLogs error:', e); }
     }
+    loadAuditLogs();
 
     // ── Render user list placeholder ──────────────────────────────
     const placeholder = `<div style="color:var(--text-muted);padding:16px;text-align:center;">Пайдаланушылар тізімі үшін User Management API-ны қосыңыз</div>`;
@@ -522,16 +517,7 @@
     const userListAdminEl = document.getElementById('userListAdmin');
     if (userListAdminEl) userListAdminEl.innerHTML = placeholder;
 
-    // Populate section-audit with same content
-    const auditFullEl = document.getElementById('auditLogFull');
-    if (auditFullEl) {
-      auditFullEl.innerHTML = audits.map(a => `
-        <div class="audit-item">
-          <div class="audit-time">${a.t}</div>
-          <div class="audit-dot" style="background:${a.c}"></div>
-          <div class="audit-what"><span class="audit-who">${a.who}</span> — ${a.what}</div>
-        </div>`).join('');
-    }
+
 
     loadExams();
     loadStats();

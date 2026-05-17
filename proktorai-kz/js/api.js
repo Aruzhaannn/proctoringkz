@@ -27,15 +27,90 @@ const Auth = {
   }
 };
 
+// ── Demo mode local data store ────────────────────────────────
+const _demoStore = {
+  exams: JSON.parse(localStorage.getItem('_demoExams') || '[]'),
+  _nextId: parseInt(localStorage.getItem('_demoNextId') || '100'),
+  _save() {
+    localStorage.setItem('_demoExams', JSON.stringify(this.exams));
+    localStorage.setItem('_demoNextId', String(this._nextId));
+  }
+};
+
+function _demoHandler(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const body = options.body ? JSON.parse(options.body) : {};
+  const path = url.replace(API_BASE, '').replace(ANALYTICS_BASE || '', '');
+
+  // ── Exams ────────────────────────────────────────────────
+  if (path === '/exams' && method === 'GET')        return _demoStore.exams;
+  if (path === '/exams/my' && method === 'GET')      return _demoStore.exams;
+  if (path === '/exams/active' && method === 'GET')  return _demoStore.exams.filter(e => e.status === 'ACTIVE');
+  if (path.match(/^\/exams\/\d+$/) && method === 'GET') {
+    const id = parseInt(path.split('/').pop());
+    return _demoStore.exams.find(e => e.id === id) || {};
+  }
+  if (path === '/exams' && method === 'POST') {
+    const exam = {
+      id: _demoStore._nextId++,
+      title: body.title || 'Жаңа емтихан',
+      description: body.description || '',
+      durationMinutes: body.durationMinutes || 60,
+      status: 'PLANNED',
+      createdByName: Auth.user()?.fullName || 'Оқытушы',
+      createdAt: new Date().toISOString()
+    };
+    _demoStore.exams.push(exam);
+    _demoStore._save();
+    return exam;
+  }
+  if (path.match(/\/exams\/\d+\/activate/) && method === 'PATCH') {
+    const id = parseInt(path.split('/')[2]);
+    const exam = _demoStore.exams.find(e => e.id === id);
+    if (exam) { exam.status = 'ACTIVE'; _demoStore._save(); }
+    return exam || {};
+  }
+  if (path.match(/\/exams\/\d+\/finish/) && method === 'PATCH') {
+    const id = parseInt(path.split('/')[2]);
+    const exam = _demoStore.exams.find(e => e.id === id);
+    if (exam) { exam.status = 'FINISHED'; _demoStore._save(); }
+    return exam || {};
+  }
+
+  // ── Sessions ─────────────────────────────────────────────
+  if (path.includes('/sessions'))  return method === 'GET' ? [] : {};
+
+  // ── Audit ────────────────────────────────────────────────
+  if (path.includes('/audit'))     return method === 'GET' ? [] : {};
+
+  // ── Analytics ────────────────────────────────────────────
+  if (path.includes('/analytics') || path.includes('/dashboard'))
+    return method === 'GET' ? [] : {};
+
+  // ── Default ──────────────────────────────────────────────
+  return method === 'GET' ? [] : {};
+}
+
 // ── Generic fetch wrapper ─────────────────────────────────────
 let _refreshing = false;
 async function apiFetch(url, options = {}, _retry = false) {
+  // ── Demo mode: work with local data without backend ─────────
+  const currentToken = Auth.token();
+  if (currentToken === 'demo-token' && !url.includes('/auth/login')) {
+    return _demoHandler(url, options);
+  }
+
   const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (Auth.token()) headers['Authorization'] = 'Bearer ' + Auth.token();
+  if (currentToken) headers['Authorization'] = 'Bearer ' + currentToken;
 
   const res = await fetch(url, { ...options, headers });
 
   if (res.status === 401 && !_retry && !_refreshing) {
+    if (url.includes('/auth/login')) {
+      const err = await res.text();
+      throw new Error(err || `HTTP ${res.status}`);
+    }
+
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken && refreshToken !== 'demo-refresh') {
       _refreshing = true;
@@ -53,7 +128,10 @@ async function apiFetch(url, options = {}, _retry = false) {
       } catch (_) {}
       _refreshing = false;
     }
-    Auth.clear(); window.location.href = '/index.html'; return;
+    Auth.clear();
+    const inPages = window.location.pathname.includes('/pages/');
+    window.location.href = inPages ? '../index.html' : 'index.html';
+    return;
   }
   if (!res.ok) {
     const err = await res.text();
@@ -87,6 +165,7 @@ const SessionAPI = {
   finish:        (id)      => apiFetch(`${API_BASE}/sessions/${id}/finish`,    { method:'PATCH' }),
   getMy:         ()        => apiFetch(`${API_BASE}/sessions/my`),
   getByExam:     (examId)  => apiFetch(`${API_BASE}/sessions/exam/${examId}`),
+  getViolations: (id)      => apiFetch(`${API_BASE}/sessions/${id}/violations`),
   addViolation:  (data)    => apiFetch(`${API_BASE}/sessions/violations`, { method:'POST', body: JSON.stringify(data) }),
   phoneUnlock:   (id)      => apiFetch(`${API_BASE}/sessions/${id}/phone-unlock`, { method:'PATCH' }),
   phoneLock:     (id)      => apiFetch(`${API_BASE}/sessions/${id}/phone-lock`,   { method:'PATCH' }),
