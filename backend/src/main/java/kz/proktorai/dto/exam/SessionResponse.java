@@ -21,4 +21,5 @@ public class SessionResponse {
     private Boolean phoneUnlocked;
     private List<ViolationResponse> violations;
     private List<SessionQuestionResponse> questions;
+    private Integer score;
 }

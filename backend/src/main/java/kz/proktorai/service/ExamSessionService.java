@@ -200,6 +200,9 @@ public class ExamSessionService {
                 .build()
         ).toList();
 
+        long correctCount = sqs.stream().filter(sq -> Boolean.TRUE.equals(sq.getIsCorrect())).count();
+        int scorePercentage = sqs.isEmpty() ? 0 : (int) Math.round((double) correctCount / sqs.size() * 100);
+
         return SessionResponse.builder()
                 .id(s.getId())
                 .examId(s.getExam().getId())
@@ -212,6 +215,7 @@ public class ExamSessionService {
                 .phoneUnlocked(s.getPhoneUnlocked())
                 .violations(s.getViolations().stream().map(this::toViolationResponse).toList())
                 .questions(qs)
+                .score(scorePercentage)
                 .build();
     }
 
