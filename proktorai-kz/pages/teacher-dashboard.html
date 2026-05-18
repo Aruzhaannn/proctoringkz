@@ -709,13 +709,20 @@
     async function loadExams() {
       try {
         const exams = await ExamAPI.getMine();
+        
+        // Сұрыптау: "Жақында болатындар" немесе "Белсенді" емтихандар бірінші тұрады
+        const statusPriority = { 'ACTIVE': 1, 'DRAFT': 2, 'FINISHED': 3 };
+        const sortedExams = [...exams].sort((a, b) => {
+          return (statusPriority[a.status] || 99) - (statusPriority[b.status] || 99);
+        });
+
         if (examSelect) {
           examSelect.innerHTML = '<option value="">Барлық емтихандар</option>' +
-            exams.map(e => `<option value="${e.id}">${e.title}</option>`).join('');
+            sortedExams.map(e => `<option value="${e.id}">${e.title}</option>`).join('');
           examSelect.addEventListener('change', () => filterStudents('all'));
         }
         // Also render the exam table in the Exams section
-        renderExamTable(exams);
+        renderExamTable(sortedExams);
       } catch {}
     }
 
