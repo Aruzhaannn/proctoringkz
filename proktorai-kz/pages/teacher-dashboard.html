@@ -263,21 +263,6 @@
         </div>
       </div>
 
-      <!-- Модальное окно создания экзамена -->
-      <div id="createExamModal" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(5,8,16,0.85);backdrop-filter:blur(10px);align-items:center;justify-content:center;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:440px;width:90%;margin:auto;margin-top:15vh;">
-          <h3 style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;margin-bottom:20px;">📝 Жаңа Емтихан Жасау</h3>
-          <div style="display:flex;flex-direction:column;gap:14px;">
-            <div><label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:4px;">Атауы *</label><input id="newExamTitle" type="text" class="form-input" placeholder="Деректер Құрылымдары — Аралық" style="width:100%;box-sizing:border-box;"></div>
-            <div><label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:4px;">Сипаттама</label><input id="newExamDesc" type="text" class="form-input" placeholder="Аралық бақылау жұмысы" style="width:100%;box-sizing:border-box;"></div>
-            <div><label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:4px;">Ұзақтылығы (мин) *</label><input id="newExamDuration" type="number" class="form-input" value="60" min="5" max="300" style="width:100%;box-sizing:border-box;"></div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:20px;">
-            <button class="btn btn-ghost" style="flex:1;" onclick="closeCreateExamModal()">Болдырмау</button>
-            <button class="btn btn-primary" style="flex:1;" onclick="createExamAndActivate()">Жасау + Белсендіру</button>
-          </div>
-        </div>
-      </div>
 
       <!-- ===== АНАЛИТИКА ===== -->
       <div id="section-analytics" style="display:none;">

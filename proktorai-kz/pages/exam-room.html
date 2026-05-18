@@ -2166,9 +2166,13 @@
   // СҰРАҚ РЕНДЕРИНГІ
   // ============================================================
   function renderQuestion(idx) {
+    const container = document.getElementById('questionContainer');
+    if (!QUESTIONS || QUESTIONS.length === 0) {
+      container.innerHTML = '<div style="padding: 20px; color: var(--text-muted);">Бұл емтиханда сұрақтар жоқ немесе жүктелмеген. Оқытушымен байланысыңыз.</div>';
+      return;
+    }
     const q = QUESTIONS[idx];
     const letters = ['А','Б','В','Г'];
-    const container = document.getElementById('questionContainer');
     container.innerHTML = `
       <div class="question-card fade-in">
         <div class="question-num">${q.num}-сұрақ / ${TOTAL_Q} · ${q.diff} · ${q.pts} ұпай</div>
