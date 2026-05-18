@@ -3,7 +3,7 @@ INSERT INTO users (email, password, full_name, role, enabled, created_at) VALUES
 ('teacher1@proktor.kz', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HCGFvrFsWYSceO.1Y2u.S', 'Самат Оспанов', 'TEACHER', true, NOW()),
 ('teacher2@proktor.kz', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HCGFvrFsWYSceO.1Y2u.S', 'Айжан Нұрланқызы', 'TEACHER', true, NOW()),
 ('teacher3@proktor.kz', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HCGFvrFsWYSceO.1Y2u.S', 'Ерлан Амангелді', 'TEACHER', true, NOW())
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name;
 
 -- Топтарды қосу
 INSERT INTO student_groups (name, created_at) VALUES
@@ -20,4 +20,4 @@ INSERT INTO users (email, password, full_name, role, enabled, created_at) VALUES
 ('student3@proktor.kz', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HCGFvrFsWYSceO.1Y2u.S', 'Берік Мақсатұлы', 'STUDENT', true, NOW()),
 ('student4@proktor.kz', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HCGFvrFsWYSceO.1Y2u.S', 'Гүлназ Болатқызы', 'STUDENT', true, NOW()),
 ('student5@proktor.kz', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HCGFvrFsWYSceO.1Y2u.S', 'Руслан Омаров', 'STUDENT', true, NOW())
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name;
