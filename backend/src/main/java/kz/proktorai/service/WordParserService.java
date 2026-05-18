@@ -59,8 +59,10 @@ public class WordParserService {
                 // Options: "A) ..." or "a) ..."
                 else if (text.matches("^[A-Da-d][\\)\\.].+")) {
                     if (currentQuestion != null) {
+                        String letter = String.valueOf(text.charAt(0)).toUpperCase();
                         String optionText = text.substring(2).trim();
                         QuestionOption option = QuestionOption.builder()
+                                .optionLetter(letter)
                                 .optionText(optionText)
                                 .isCorrect(false) // will set later
                                 .question(currentQuestion)

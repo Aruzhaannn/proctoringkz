@@ -32,11 +32,21 @@ public class ExamController {
     // Teacher/Admin — емтихан жасау (файлмен бірге)
     @PostMapping(value = "/with-file", consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
-    public ResponseEntity<ExamResponse> createWithFile(
+    public ResponseEntity<?> createWithFile(
             @Valid @ModelAttribute ExamRequest request,
             @RequestPart(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
             @AuthenticationPrincipal User teacher) {
-        return ResponseEntity.ok(examService.create(request, file, teacher));
+        try {
+            return ResponseEntity.ok(examService.create(request, file, teacher));
+        } catch (Throwable t) {
+            try {
+                java.io.PrintWriter pw = new java.io.PrintWriter("error_log.txt");
+                t.printStackTrace(pw);
+                pw.close();
+            } catch (Exception ex) {}
+            t.printStackTrace();
+            return ResponseEntity.status(500).body("Error creating exam: " + t.toString() + " - " + t.getMessage());
+        }
     }
 
     // Teacher/Admin — белсендіру
