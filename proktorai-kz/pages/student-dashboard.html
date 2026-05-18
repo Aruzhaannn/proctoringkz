@@ -86,7 +86,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
             <div>
-              <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Әлібек Жақсыбеков</div>
+              <div class="user-name-placeholder" style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Әлібек Жақсыбеков</div>
               <div style="font-size:0.72rem;color:var(--text-muted);">АТ-401 · Студент</div>
             </div>
           </div>
@@ -248,15 +248,15 @@
             <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;">
               <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:2rem;">👤</div>
               <div>
-                <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;">Әлібек Жақсыбеков</div>
+                <div class="user-name-placeholder" style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;">Әлібек Жақсыбеков</div>
                 <div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px;">АТ-401 · Студент</div>
-                <div style="font-size:0.78rem;color:var(--accent);margin-top:2px;">alikek@university.kz</div>
+                <div class="user-email-placeholder" style="font-size:0.78rem;color:var(--accent);margin-top:2px;">alikek@university.kz</div>
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:12px;">
               <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
                 <span style="color:var(--text-muted);">Толық аты</span>
-                <span style="font-weight:600;">Әлібек Жақсыбеков</span>
+                <span class="user-name-placeholder" style="font-weight:600;">Әлібек Жақсыбеков</span>
               </div>
               <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
                 <span style="color:var(--text-muted);">Студент ID</span>
@@ -272,7 +272,7 @@
               </div>
               <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.85rem;">
                 <span style="color:var(--text-muted);">Email</span>
-                <span style="font-weight:600;">alikek@university.kz</span>
+                <span class="user-email-placeholder" style="font-weight:600;">alikek@university.kz</span>
               </div>
             </div>
           </div>
@@ -382,11 +382,10 @@ Auth.check();
 const user = Auth.user();
 if (user) {
   // Пайдаланушы атын жаңарту
-  document.querySelectorAll('.user-name-placeholder').forEach(el => el.textContent = user.fullName);
+  document.querySelectorAll('.user-name-placeholder').forEach(el => el.textContent = user.fullName || 'Студент');
+  document.querySelectorAll('.user-email-placeholder').forEach(el => el.textContent = user.email || '-');
   const greeting = document.querySelector('.page-header h1');
-  if (greeting) greeting.textContent = `Қайырлы таң, ${user.fullName.split(' ')[0]} 👋`;
-  const userCard = document.querySelector('.sidebar .card div[style*="font-weight:600"]');
-  if (userCard) userCard.textContent = user.fullName;
+  if (greeting) greeting.textContent = `Қайырлы таң, ${(user.fullName || 'Студент').split(' ')[0]} 👋`;
 }
 
 // ── Sidebar навигация ─────────────────────────────────────────
