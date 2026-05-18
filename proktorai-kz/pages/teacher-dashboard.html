@@ -1231,12 +1231,7 @@
       if (_auditLog.length > 200) _auditLog.pop();
       renderAuditLog();
       // Try to persist to backend
-      SessionAPI.addViolation?.({
-        sessionId: sessionId || 0,
-        type:      action,
-        score:     0,
-        details:   JSON.stringify({ who: entry.who, details, browser: entry.browser })
-      }).catch(() => {});
+      AuditAPI.log(action, sessionId || 0, JSON.stringify({ who: entry.who, details, browser: entry.browser })).catch(() => {});
     }
 
     function renderAuditLog() {

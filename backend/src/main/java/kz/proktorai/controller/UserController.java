@@ -32,4 +32,17 @@ public class UserController {
                 .build()).collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        List<UserResponse> responses = users.stream().map(u -> UserResponse.builder()
+                .id(u.getId())
+                .email(u.getEmail())
+                .fullName(u.getFullName())
+                .role(u.getRole())
+                .build()).collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
 }
