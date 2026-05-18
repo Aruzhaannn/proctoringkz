@@ -498,19 +498,58 @@
       } catch (e) { alert('Қате: ' + e.message); }
     }
     
-    function manageGroupStudents(id) {
+    let allStudents = [];
+
+    async function manageGroupStudents(id) {
       document.getElementById('assignGroupId').value = id;
+      document.getElementById('assignStudentSearch').value = '';
+      const select = document.getElementById('assignStudentSelect');
+      select.style.display = 'none';
+      select.innerHTML = '<option value="">Жүктелуде...</option>';
       document.getElementById('assignStudentModal').style.display = 'flex';
+      
+      try {
+        allStudents = await UserAPI.getStudents() || [];
+        renderStudentSelect(allStudents);
+      } catch (e) {
+        select.innerHTML = '<option value="">Студенттерді жүктеу қатесі</option>';
+        select.style.display = 'block';
+      }
     }
+    
+    function renderStudentSelect(students) {
+      const select = document.getElementById('assignStudentSelect');
+      if (!students || students.length === 0) {
+        select.innerHTML = '<option value="" disabled>Студенттер табылмады</option>';
+      } else {
+        select.innerHTML = students.map(s => `<option value="${s.id}">${s.fullName} (${s.email})</option>`).join('');
+      }
+      select.style.display = 'block';
+    }
+    
+    function filterStudents() {
+      const q = document.getElementById('assignStudentSearch').value.toLowerCase();
+      if (!q) {
+        renderStudentSelect(allStudents);
+        return;
+      }
+      const filtered = allStudents.filter(s => 
+        (s.fullName && s.fullName.toLowerCase().includes(q)) || 
+        (s.email && s.email.toLowerCase().includes(q))
+      );
+      renderStudentSelect(filtered);
+    }
+    
     function closeAssignStudentModal() {
       document.getElementById('assignStudentModal').style.display = 'none';
     }
     async function assignStudent() {
       const groupId = document.getElementById('assignGroupId').value;
-      const studentId = document.getElementById('assignStudentId').value;
-      if (!studentId) return alert('Студент ID енгізіңіз');
+      const select = document.getElementById('assignStudentSelect');
+      const studentId = parseInt(select.value, 10);
+      if (!studentId) return alert('Студентті таңдаңыз!');
       try {
-        await GroupAPI.assignStudent(groupId, studentId);
+        await GroupAPI.addStudents(groupId, [studentId]);
         closeAssignStudentModal();
         loadGroups();
         alert('Сәтті қосылды!');
