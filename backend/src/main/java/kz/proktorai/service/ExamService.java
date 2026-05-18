@@ -69,12 +69,10 @@ public class ExamService {
         return toResponse(examRepository.save(exam));
     }
 
-    @Cacheable(value = "exams", key = "'all'")
     public List<ExamResponse> getAll() {
         return examRepository.findAll().stream().map(this::toResponse).toList();
     }
 
-    @Cacheable(value = "exams", key = "'active'")
     public List<ExamResponse> getActive() {
         return examRepository.findByStatus(ExamStatus.ACTIVE).stream().map(this::toResponse).toList();
     }

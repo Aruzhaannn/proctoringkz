@@ -1186,6 +1186,11 @@
   </div>
 
   <script>
+  let currentSessionId = null;
+  let QUESTIONS = [];
+  let TOTAL_Q = 0;
+  let currentQ  = 0;
+  let answers = [];
   // ============================================================
   // ADAPTIVE CHEAT ENGINE — CheatEngine + EvidenceCollector
   // ============================================================
@@ -2247,18 +2252,12 @@
   // ============================================================
   // BACKEND + AI SERVICE БАЙЛАНЫСЫ
   // ============================================================
-  let currentSessionId = null;
   const canvas = document.createElement('canvas');
 
   // URL-ден examId алу
   function getExamId() {
     return new URLSearchParams(window.location.search).get('examId');
   }
-
-  let QUESTIONS = [];
-  let TOTAL_Q = 0;
-  let currentQ  = 0;
-  let answers = [];
 
   // Емтиханды бастау — backend session жасау
   async function initExamSession() {
