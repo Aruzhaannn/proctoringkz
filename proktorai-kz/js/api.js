@@ -172,8 +172,8 @@ const ExamAPI = {
   getMine:        ()         => apiFetch(`${API_BASE}/exams/my`),
   create:         (data)     => apiFetch(`${API_BASE}/exams`,            { method:'POST', body: JSON.stringify(data) }),
   createWithFile: (formData) => apiFetch(`${API_BASE}/exams/with-file`,  { method:'POST', body: formData }),
-  activate:       (id)       => apiFetch(`${API_BASE}/exams/${id}/activate`, { method:'PATCH' }),
-  finish:         (id)       => apiFetch(`${API_BASE}/exams/${id}/finish`,   { method:'PATCH' }),
+  activate: (id) => apiFetch(`${API_BASE}/exams/${id}/activate`, { method:'PATCH' }),
+  finish:   (id) => apiFetch(`${API_BASE}/exams/${id}/finish`, { method:'PATCH' }),
 };
 
 // ── Session API ───────────────────────────────────────────────

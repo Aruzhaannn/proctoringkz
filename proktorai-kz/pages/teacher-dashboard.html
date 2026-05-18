@@ -98,6 +98,99 @@
     .q-bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-top: 12px; }
     .q-bar { flex: 1; border-radius: 3px 3px 0 0; background: var(--accent); transition: height 0.5s ease; cursor: pointer; position: relative; min-width: 8px; }
     .q-bar:hover::after { content: attr(data-q); position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color:#fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+
+    /* ── Premium Glassmorphic Modal ── */
+    #createExamModal {
+      backdrop-filter: blur(14px) saturate(180%);
+      background: rgba(5, 10, 20, 0.75) !important;
+    }
+    .premium-modal {
+      background: rgba(20, 32, 56, 0.85) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 50px rgba(59, 130, 246, 0.15) !important;
+      width: 100%;
+      max-width: 540px !important;
+      padding: 34px !important;
+      animation: modalSlideUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+    @keyframes modalSlideUp {
+      from { opacity: 0; transform: translateY(30px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-title {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .premium-input {
+      width: 100%;
+      background: rgba(11, 24, 41, 0.65) !important;
+      border: 1px solid rgba(255, 255, 255, 0.09) !important;
+      color: var(--text-primary) !important;
+      padding: 12px 16px !important;
+      border-radius: 9px !important;
+      font-size: 0.86rem !important;
+      font-family: var(--font-body);
+      transition: all 0.25s ease !important;
+      outline: none !important;
+      box-sizing: border-box;
+    }
+    .premium-input:focus {
+      border-color: var(--accent) !important;
+      background: rgba(11, 24, 41, 0.9) !important;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.3) !important;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .premium-file-upload {
+      border: 2px dashed rgba(59, 130, 246, 0.25);
+      border-radius: 11px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(11, 24, 41, 0.3);
+      transition: all 0.25s ease;
+      position: relative;
+    }
+    .premium-file-upload:hover {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.05);
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+    }
+    .premium-file-upload input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .upload-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    .upload-text {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .upload-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -354,47 +447,60 @@
       </div>
 
       <!-- ===== CREATE EXAM MODAL ===== -->
-      <div id="createExamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(10px);">
-        <div class="card" style="width:100%;max-width:500px;animation:overlayFadeIn 0.3s ease;">
-          <h2 style="margin-bottom:16px;">Жаңа емтихан жасау</h2>
+      <div id="createExamModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;">
+        <div class="premium-modal">
+          <h2 class="modal-title">
+            <span style="font-size: 1.6rem; display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); width: 44px; height: 44px; border-radius: 10px; color: var(--accent);">📝</span>
+            Жаңа емтихан жасау
+          </h2>
+          
           <div class="form-group">
-            <label>Атауы</label>
-            <input type="text" id="newExamTitle" class="form-control" placeholder="Мысалы: Алгоритмдер қорытынды" />
+            <label>Атауы *</label>
+            <input type="text" id="newExamTitle" class="premium-input" placeholder="Мысалы: Алгоритмдер қорытынды" />
           </div>
+          
           <div class="form-group">
             <label>Сипаттамасы</label>
-            <input type="text" id="newExamDesc" class="form-control" placeholder="Қысқаша сипаттама" />
+            <input type="text" id="newExamDesc" class="premium-input" placeholder="Қысқаша сипаттама немесе нұсқаулық" />
           </div>
+          
           <div class="grid-2">
             <div class="form-group">
               <label>Ұзақтылығы (мин)</label>
-              <input type="number" id="newExamDuration" class="form-control" value="60" />
+              <input type="number" id="newExamDuration" class="premium-input" value="60" min="5" max="300" />
             </div>
             <div class="form-group">
               <label>Өту балы (%)</label>
-              <input type="number" id="newExamPassingScore" class="form-control" value="50" />
+              <input type="number" id="newExamPassingScore" class="premium-input" value="50" min="0" max="100" />
             </div>
           </div>
+          
           <div class="grid-2">
             <div class="form-group">
               <label>Сұрақтар саны (әр студентке)</label>
-              <input type="number" id="newExamTotalQs" class="form-control" value="30" />
+              <input type="number" id="newExamTotalQs" class="premium-input" value="15" min="1" max="100" />
             </div>
             <div class="form-group">
               <label>Топқа тағайындау</label>
-              <select id="newExamGroup" class="form-control">
-                <option value="">Таңдаңыз...</option>
+              <select id="newExamGroup" class="premium-input">
+                <option value="">Барлық топтар</option>
               </select>
             </div>
           </div>
-          <div class="form-group">
-            <label>Сұрақтар банкі (Word .docx)</label>
-            <input type="file" id="newExamFile" class="form-control" accept=".docx" style="padding:10px;" />
-            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Сұрақтар автоматты түрде оқылады</div>
+          
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label>Сұрақтар банкі (Word .docx) *</label>
+            <div class="premium-file-upload" id="fileUploadZone">
+              <div class="upload-icon">📂</div>
+              <div class="upload-text" id="uploadText">Файлды осында сүйреңіз немесе басыңыз</div>
+              <div class="upload-sub">Тек .docx форматтағы сұрақтар банкі қабылданады</div>
+              <input type="file" id="newExamFile" accept=".docx" onchange="handleExamFileChange(this)" />
+            </div>
           </div>
-          <div style="display:flex;gap:12px;margin-top:24px;">
-            <button class="btn btn-ghost" style="flex:1;" onclick="closeCreateExamModal()">Болдырмау</button>
-            <button class="btn btn-primary" style="flex:1;" onclick="createExamAndActivate()">Жасау & Бастау</button>
+          
+          <div style="display:flex;gap:12px;margin-top:28px;">
+            <button class="btn btn-ghost" style="flex:1; justify-content: center; height: 44px; font-weight: 600;" onclick="closeCreateExamModal()">Болдырмау</button>
+            <button class="btn btn-primary" style="flex:1; justify-content: center; height: 44px; font-weight: 600; background: linear-gradient(135deg, var(--accent), var(--accent-2));" onclick="createExamAndActivate()">Жасау & Бастау</button>
           </div>
         </div>
       </div>
@@ -651,12 +757,38 @@
       } catch (e) { console.warn('Groups not loaded', e); }
     }
 
+    function handleExamFileChange(input) {
+      const zone = document.getElementById('fileUploadZone');
+      const txt = document.getElementById('uploadText');
+      if (input && input.files && input.files.length > 0) {
+        const file = input.files[0];
+        txt.textContent = `Таңдалған файл: ${file.name}`;
+        zone.style.borderColor = 'var(--accent-green)';
+        zone.style.background = 'rgba(16, 185, 129, 0.05)';
+      } else {
+        txt.textContent = 'Файлды осында сүйреңіз немесе басыңыз';
+        zone.style.borderColor = 'rgba(59, 130, 246, 0.25)';
+        zone.style.background = 'rgba(11, 24, 41, 0.3)';
+      }
+    }
+
     function showCreateExamModal() {
       document.getElementById('createExamModal').style.display = 'flex';
       loadGroupsForExam();
     }
     function closeCreateExamModal() {
       document.getElementById('createExamModal').style.display = 'none';
+      document.getElementById('newExamTitle').value = '';
+      document.getElementById('newExamDesc').value = '';
+      document.getElementById('newExamDuration').value = '60';
+      document.getElementById('newExamPassingScore').value = '50';
+      document.getElementById('newExamTotalQs').value = '15';
+      document.getElementById('newExamGroup').value = '';
+      const fileInput = document.getElementById('newExamFile');
+      if (fileInput) {
+        fileInput.value = '';
+        handleExamFileChange(fileInput);
+      }
     }
 
     async function createExamAndActivate() {
