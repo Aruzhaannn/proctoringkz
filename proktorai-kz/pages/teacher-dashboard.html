@@ -368,6 +368,51 @@
         </div>
       </div>
 
+      <!-- ===== CREATE EXAM MODAL ===== -->
+      <div id="createExamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(10px);">
+        <div class="card" style="width:100%;max-width:500px;animation:overlayFadeIn 0.3s ease;">
+          <h2 style="margin-bottom:16px;">Жаңа емтихан жасау</h2>
+          <div class="form-group">
+            <label>Атауы</label>
+            <input type="text" id="newExamTitle" class="form-control" placeholder="Мысалы: Алгоритмдер қорытынды" />
+          </div>
+          <div class="form-group">
+            <label>Сипаттамасы</label>
+            <input type="text" id="newExamDesc" class="form-control" placeholder="Қысқаша сипаттама" />
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Ұзақтылығы (мин)</label>
+              <input type="number" id="newExamDuration" class="form-control" value="60" />
+            </div>
+            <div class="form-group">
+              <label>Өту балы (%)</label>
+              <input type="number" id="newExamPassingScore" class="form-control" value="50" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Сұрақтар саны (әр студентке)</label>
+              <input type="number" id="newExamTotalQs" class="form-control" value="30" />
+            </div>
+            <div class="form-group">
+              <label>Топқа тағайындау</label>
+              <select id="newExamGroup" class="form-control">
+                <option value="">Таңдаңыз...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Сұрақтар банкі (Word .docx)</label>
+            <input type="file" id="newExamFile" class="form-control" accept=".docx" style="padding:10px;" />
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Сұрақтар автоматты түрде оқылады</div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:24px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeCreateExamModal()">Болдырмау</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="createExamAndActivate()">Жасау & Бастау</button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -610,8 +655,20 @@
       }).join('');
     }
 
+    async function loadGroupsForExam() {
+      try {
+        const groups = await GroupAPI.getAll();
+        const sel = document.getElementById('newExamGroup');
+        if (sel) {
+          sel.innerHTML = '<option value="">Таңдаңыз...</option>' + 
+            groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        }
+      } catch (e) { console.warn('Groups not loaded', e); }
+    }
+
     function showCreateExamModal() {
       document.getElementById('createExamModal').style.display = 'flex';
+      loadGroupsForExam();
     }
     function closeCreateExamModal() {
       document.getElementById('createExamModal').style.display = 'none';
@@ -621,9 +678,28 @@
       const title = document.getElementById('newExamTitle').value.trim();
       const desc = document.getElementById('newExamDesc').value.trim();
       const dur = parseInt(document.getElementById('newExamDuration').value) || 60;
+      const totalQs = parseInt(document.getElementById('newExamTotalQs').value) || 30;
+      const passingScore = parseInt(document.getElementById('newExamPassingScore').value) || 50;
+      const groupId = document.getElementById('newExamGroup').value;
+      const fileInput = document.getElementById('newExamFile');
+
       if (!title) { alert('Атауын енгізіңіз!'); return; }
+
       try {
-        const exam = await ExamAPI.create({ title, description: desc, durationMinutes: dur });
+        const formData = new FormData();
+        formData.append('title', title);
+        if (desc) formData.append('description', desc);
+        formData.append('durationMinutes', dur);
+        formData.append('totalQuestions', totalQs);
+        formData.append('passingScore', passingScore);
+        if (groupId) formData.append('groupId', groupId);
+        
+        if (fileInput.files.length > 0) {
+          formData.append('file', fileInput.files[0]);
+        }
+
+        const exam = await ExamAPI.createWithFile(formData);
+        
         // Immediately activate
         await ExamAPI.activate(exam.id);
         closeCreateExamModal();

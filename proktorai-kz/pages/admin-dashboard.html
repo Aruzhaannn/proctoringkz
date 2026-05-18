@@ -102,6 +102,10 @@
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/><line x1="9" y1="12" x2="15" y2="12"/></svg></span>
           Емтихандар <span class="badge-count">14</span>
         </a>
+        <a href="#" class="sidebar-item" data-section="groups">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          Топтар
+        </a>
         <a href="#" class="sidebar-item" data-section="audit">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
           Аудит журналы
@@ -274,6 +278,26 @@
         </div>
       </div>
 
+      <!-- ===== ТОПТАР ===== -->
+      <div id="section-groups" style="display:none;">
+        <div class="page-header fade-in">
+          <h1>Топтарды басқару</h1>
+          <p>Студенттер топтарын құру және студенттерді тағайындау</p>
+        </div>
+        <div class="card fade-in">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3>Топтар тізімі</h3>
+            <button class="btn btn-primary" style="font-size:0.8rem;" onclick="showCreateGroupModal()">+ Жаңа Топ</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>Атауы</th><th>Студенттер саны</th><th>Әрекет</th></tr></thead>
+            <tbody id="adminGroupsBody">
+              <tr><td colspan="4" style="color:var(--text-muted);text-align:center;">Деректер жүктелуде...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ===== ЕМТИХАНДАР ===== -->
       <div id="section-exams" style="display:none;">
         <div class="page-header fade-in"><h1>📝 Емтихандарды басқару</h1><p>Барлық емтихандар тізімі</p></div>
@@ -389,6 +413,37 @@
         </div>
       </div>
 
+      <!-- ===== CREATE GROUP MODAL ===== -->
+      <div id="createGroupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(10px);">
+        <div class="card" style="width:100%;max-width:400px;animation:overlayFadeIn 0.3s ease;">
+          <h2 style="margin-bottom:16px;">Жаңа топ қосу</h2>
+          <div class="form-group">
+            <label>Топтың атауы</label>
+            <input type="text" id="newGroupName" class="form-control" placeholder="Мысалы: IT-2101" />
+          </div>
+          <div style="display:flex;gap:12px;margin-top:24px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeCreateGroupModal()">Болдырмау</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="createGroup()">Сақтау</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ASSIGN STUDENT MODAL ===== -->
+      <div id="assignStudentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(10px);">
+        <div class="card" style="width:100%;max-width:400px;animation:overlayFadeIn 0.3s ease;">
+          <h2 style="margin-bottom:16px;">Студентті топқа қосу</h2>
+          <input type="hidden" id="assignGroupId" />
+          <div class="form-group">
+            <label>Студент ID</label>
+            <input type="number" id="assignStudentId" class="form-control" placeholder="Мысалы: 1" />
+          </div>
+          <div style="display:flex;gap:12px;margin-top:24px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeAssignStudentModal()">Болдырмау</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="assignStudent()">Қосу</button>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -396,7 +451,7 @@
     Auth.check();
 
     // Admin sidebar навигация
-    const adminSections = ['overview','users','exams','audit','analytics','services','security','config','integrations'];
+    const adminSections = ['overview','users','exams','audit','analytics','services','security','config','integrations','groups'];
     function showAdminSection(name) {
       adminSections.forEach(id => {
         const el = document.getElementById('section-' + id);
@@ -405,7 +460,10 @@
       document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
         item.classList.toggle('active', item.dataset.section === name);
       });
+      
+      if (name === 'groups') loadGroups();
     }
+    
     document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
       item.addEventListener('click', e => {
         e.preventDefault();
@@ -419,6 +477,58 @@
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('tab-' + name).classList.add('active');
       btn.classList.add('active');
+    }
+
+    // ── Group Management ───────────────────────────────────────────
+    function showCreateGroupModal() {
+      document.getElementById('createGroupModal').style.display = 'flex';
+    }
+    function closeCreateGroupModal() {
+      document.getElementById('createGroupModal').style.display = 'none';
+    }
+    async function createGroup() {
+      const name = document.getElementById('newGroupName').value.trim();
+      if (!name) return alert('Топ атауын енгізіңіз');
+      try {
+        await GroupAPI.create(name);
+        closeCreateGroupModal();
+        loadGroups();
+      } catch (e) { alert('Қате: ' + e.message); }
+    }
+    
+    function manageGroupStudents(id) {
+      document.getElementById('assignGroupId').value = id;
+      document.getElementById('assignStudentModal').style.display = 'flex';
+    }
+    function closeAssignStudentModal() {
+      document.getElementById('assignStudentModal').style.display = 'none';
+    }
+    async function assignStudent() {
+      const groupId = document.getElementById('assignGroupId').value;
+      const studentId = document.getElementById('assignStudentId').value;
+      if (!studentId) return alert('Студент ID енгізіңіз');
+      try {
+        await GroupAPI.assignStudent(groupId, studentId);
+        closeAssignStudentModal();
+        loadGroups();
+        alert('Сәтті қосылды!');
+      } catch (e) { alert('Қате: ' + e.message); }
+    }
+
+    async function loadGroups() {
+      try {
+        const groups = await GroupAPI.getAll();
+        const tbody = document.getElementById('adminGroupsBody');
+        if (!tbody) return;
+        tbody.innerHTML = groups && groups.length
+          ? groups.map(g => `<tr>
+              <td>${g.id}</td>
+              <td><strong>${g.name}</strong></td>
+              <td>${g.studentIds ? g.studentIds.length : 0}</td>
+              <td><button class="btn btn-ghost" style="font-size:0.75rem;padding:5px 10px;" onclick="manageGroupStudents(${g.id})">Студенттерді басқару</button></td>
+            </tr>`).join('')
+          : '<tr><td colspan="4" style="color:var(--text-muted);text-align:center;">Топтар жоқ</td></tr>';
+      } catch (e) { console.error('loadGroups', e); }
     }
 
     // ── Load exams for admin ──────────────────────────────────────

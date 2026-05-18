@@ -2158,106 +2158,6 @@
   }, 1000);
 
   // ============================================================
-  // СҰРАҚТАР ДЕРЕКТЕРІ (15 сұрақ)
-  // ============================================================
-  const QUESTIONS = [
-    {
-      num: 1, diff: 'Оңай', pts: 3,
-      text: 'Байланыстырылған тізімде (Linked List) элементке қол жеткізудің уақыттық күрделілігі қандай?',
-      opts: ['O(1) — тұрақты', 'O(log n) — логарифмдік', 'O(n) — сызықтық', 'O(n²) — квадраттық'],
-      correct: 2
-    },
-    {
-      num: 2, diff: 'Орташа', pts: 4,
-      text: '<em>n</em> түйіні бар теңдестірілген Екілік Іздеу Ағашында (BST) элементті іздеудің уақыттық күрделілігі қандай?',
-      opts: ['O(n) — сызықтық уақыт', 'O(log n) — логарифмдік уақыт', 'O(n log n) — сызықтық-логарифмдік', 'O(1) — тұрақты уақыт'],
-      correct: 1
-    },
-    {
-      num: 3, diff: 'Оңай', pts: 3,
-      text: 'Stack деректер құрылымы қандай принцип бойынша жұмыс жасайды?',
-      opts: ['FIFO (First In First Out)', 'LIFO (Last In First Out)', 'LILO (Last In Last Out)', 'FILO (First In Last Out)'],
-      correct: 1
-    },
-    {
-      num: 4, diff: 'Орташа', pts: 4,
-      text: 'Merge Sort алгоритмінің орташа жағдайдағы уақыттық күрделілігі қандай?',
-      opts: ['O(n)', 'O(n log n)', 'O(n²)', 'O(log n)'],
-      correct: 1
-    },
-    {
-      num: 5, diff: 'Қиын', pts: 6,
-      text: 'Граф алгоритмдерінде BFS пен DFS айырмашылығы қандай? Ең қысқа жолды табу үшін қайсысы тиімдірек?',
-      opts: ['BFS — тереңдік, DFS — ені, DFS тиімдірек', 'BFS — ені, DFS — тереңдік, BFS тиімдірек', 'Екеуі де бірдей тиімді', 'BFS — ені, DFS — тереңдік, DFS тиімдірек'],
-      correct: 1
-    },
-    {
-      num: 6, diff: 'Оңай', pts: 3,
-      text: 'Хэш кестесінде (Hash Table) іздеудің орташа уақыттық күрделілігі қандай?',
-      opts: ['O(n)', 'O(log n)', 'O(1)', 'O(n log n)'],
-      correct: 2
-    },
-    {
-      num: 7, diff: 'Орташа', pts: 4,
-      text: 'Кадане алгоритмін пайдаланып максималды қосындылы ішмассивті табудың уақыттық күрделілігі?',
-      opts: ['O(n²)', 'O(n log n)', 'O(n)', 'O(log n)'],
-      correct: 2
-    },
-    {
-      num: 8, diff: 'Қиын', pts: 6,
-      text: 'Дейкстра алгоритмі не үшін қолданылады және оның уақыттық күрделілігі (min-heap пайдаланғанда)?',
-      opts: ['Минималды кесуші ағаш, O(V²)', 'Ең қысқа жол, O((V+E) log V)', 'Топологиялық сортировка, O(V+E)', 'Байланыстылықты тексеру, O(V)'],
-      correct: 1
-    },
-    {
-      num: 9, diff: 'Орташа', pts: 4,
-      text: 'Quick Sort алгоритмінің ең нашар жағдайдағы уақыттық күрделілігі қандай?',
-      opts: ['O(n log n)', 'O(n)', 'O(n²)', 'O(log n)'],
-      correct: 2
-    },
-    {
-      num: 10, diff: 'Оңай', pts: 3,
-      text: 'Бинарлы іздеудің жұмыс жасау шарты қандай?',
-      opts: ['Массив кездейсоқ реттелген болуы керек', 'Массив сорттелген болуы керек', 'Массив тек оң сандардан тұруы керек', 'Массив 100 элементтен аз болуы керек'],
-      correct: 1
-    },
-    {
-      num: 11, diff: 'Қиын', pts: 6,
-      text: 'Dynamic Programming (ДП) пен рекурсияның айырмашылығы не? ДП-ның басты артықшылығы?',
-      opts: ['ДП жылдамырақ, себебі параллель орындайды', 'ДП есептелген нәтижелерді сақтайды, қайта есептемейді (мемоизация)', 'ДП тек граф есептеріне қолданылады', 'ДП рекурсиядан баяуырақ жұмыс жасайды'],
-      correct: 1
-    },
-    {
-      num: 12, diff: 'Оңай', pts: 3,
-      text: 'Толық екілік ағашта (Complete Binary Tree) n-деңгейде максимум неше түйін болады?',
-      opts: ['n', '2n', '2^n', 'n²'],
-      correct: 2
-    },
-    {
-      num: 13, diff: 'Орташа', pts: 4,
-      text: 'Trie деректер құрылымы негізінен қандай операциялар үшін тиімді?',
-      opts: ['Сандарды сортировкалау', 'Жолдарды іздеу және префиксті тексеру', 'Граф бойынша ең қысқа жолды табу', 'Стек операцияларын орындау'],
-      correct: 1
-    },
-    {
-      num: 14, diff: 'Қиын', pts: 6,
-      text: 'Red-Black Tree мен AVL Tree арасындағы басты айырмашылық және қолдану жағдайлары?',
-      opts: ['Red-Black Tree — тезірек кірістіру, AVL — тезірек іздеу', 'AVL Tree — тезірек кірістіру, Red-Black — тезірек іздеу', 'Екеуі де бірдей, тек түс ережесі ерекшелейді', 'Red-Black Tree тек сызықтық деректер үшін'],
-      correct: 0
-    },
-    {
-      num: 15, diff: 'Орташа', pts: 4,
-      text: 'Floyd-Warshall алгоритмі не істейді және оның уақыттық күрделілігі қандай?',
-      opts: ['Минималды кесуші ағаш табады, O(E log V)', 'Барлық жұп төбелер арасындағы ең қысқа жолдарды табады, O(V³)', 'Тек бір бастапқы нүктеден ең қысқа жолды табады, O(V²)', 'Граф байланыстылығын тексереді, O(V+E)'],
-      correct: 1
-    }
-  ];
-
-  const TOTAL_Q = 15;
-  let currentQ  = 0; // 0-indexed
-  const answers = new Array(TOTAL_Q).fill(null);
-
-  // ============================================================
   // СҰРАҚ РЕНДЕРИНГІ
   // ============================================================
   function renderQuestion(idx) {
@@ -2355,34 +2255,31 @@
     return new URLSearchParams(window.location.search).get('examId');
   }
 
+  let QUESTIONS = [];
+  let TOTAL_Q = 0;
+  let currentQ  = 0;
+  let answers = [];
+
   // Емтиханды бастау — backend session жасау
   async function initExamSession() {
     let examId = getExamId();
     
-    // Егер examId жоқ болса — белсенді емтиханды автоматты түрде іздеу
     if (!examId) {
       try {
         const activeExams = await ExamAPI.getActive();
         if (activeExams && activeExams.length > 0) {
           examId = activeExams[0].id;
-          console.log('[ProctorAI] Auto-selected active exam:', examId, activeExams[0].title);
         }
-      } catch (e) {
-        console.warn('[ProctorAI] No active exams found:', e.message);
-      }
+      } catch (e) { }
     }
     
-    // Егер examId жоқ — teacher-ге де бот шарайымен көрсетеміз
     if (!examId) {
       try {
         const allExams = await ExamAPI.getMine();
         if (allExams && allExams.length > 0) {
           examId = allExams[0].id;
-          console.log('[ProctorAI] Fallback to first exam:', examId);
         }
-      } catch (e) {
-        console.warn('[ProctorAI] No exams at all:', e.message);
-      }
+      } catch (e) { }
     }
     
     if (!examId) {
@@ -2393,6 +2290,38 @@
     try {
       const session = await SessionAPI.start(examId);
       currentSessionId = session.id;
+      
+      if (session.questions && session.questions.length > 0) {
+          QUESTIONS = session.questions.map((q, idx) => ({
+              id: q.id,
+              num: idx + 1,
+              diff: 'Жүйе',
+              pts: 1,
+              text: q.text,
+              opts: q.options.map(o => o.text),
+              optIds: q.options.map(o => o.id)
+          }));
+          TOTAL_Q = QUESTIONS.length;
+          answers = new Array(TOTAL_Q).fill(null);
+          document.getElementById('qNav').innerHTML = '';
+          document.getElementById('progressBar').innerHTML = '';
+          
+          for (let i = 0; i < TOTAL_Q; i++) {
+            const d = document.createElement('div');
+            d.id = 'dot' + i;
+            d.className = 'q-dot' + (i === 0 ? ' current' : '');
+            document.getElementById('progressBar').appendChild(d);
+            const b = document.createElement('div');
+            b.id = 'qbtn' + i;
+            b.className = 'q-nav-btn' + (i === 0 ? ' current' : '');
+            b.textContent = i + 1;
+            b.onclick = () => goToQuestion(i);
+            document.getElementById('qNav').appendChild(b);
+          }
+          
+          renderQuestion(0);
+      }
+
       // Уақытты examId негізінде жаңарту
       const exam = await ExamAPI.getById(examId);
       if (exam) {
@@ -2542,7 +2471,15 @@
     stopNofaceCountdown(); stopGazeTimer();
 
     if (currentSessionId) {
-      try { await SessionAPI.finish(currentSessionId); } catch (e) {}
+      try {
+        const ansMap = {};
+        QUESTIONS.forEach((q, idx) => {
+          if (answers[idx] !== null) {
+            ansMap[q.id] = q.opts[answers[idx]];
+          }
+        });
+        await SessionAPI.finish(currentSessionId, ansMap);
+      } catch (e) {}
     }
     window.location.href = 'student-dashboard.html';
   }
